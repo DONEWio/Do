@@ -1,6 +1,17 @@
 # DoNew
 
+[![PyPI version](https://badge.fury.io/py/donew.svg)](https://badge.fury.io/py/donew)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/donew)](https://pypi.org/project/donew/)
+[![PyPI - License](https://img.shields.io/pypi/l/donew)](https://pypi.org/project/donew/)
+
 A powerful Python package designed for AI agents to perform web processing, document navigation, and autonomous task execution. DoNew provides a high-level, agentic interface that makes it easy for AI systems to interact with web content and documents.
+
+## Quick Install
+
+```bash
+pip install donew
+donew-install-browsers  # Install required browsers
+```
 
 ## Why DoNew?
 
@@ -42,23 +53,11 @@ DoNew is built with AI agents in mind, providing intuitive interfaces for:
   - Multi-step operation handling
   - Context-aware actions
 
-## Installation
-
-1. Install the package:
-```bash
-pip install donew
-```
-
-2. Install required browsers (needed for web automation):
-```bash
-donew-install-browsers
-```
-
 ## Quick Start
 
 ```python
 import asyncio
-from DoNew import DO
+from donew import DO
 
 async def main():
     # Configure browser settings (optional)
@@ -114,7 +113,7 @@ if __name__ == "__main__":
 ### Example: AI Agent Task Execution
 
 ```python
-from DoNew import DO
+from donew import DO
 
 async def search_and_extract(query: str):
     browser = await DO.Browse("https://example.com/search")
