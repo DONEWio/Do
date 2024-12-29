@@ -163,19 +163,50 @@ async def test_image_processing(httpbin_url, httpbin_available):
     browser = await DO.Browse(f"{httpbin_url}/image/png")
 
     try:
-        # Capture the image
-        image_data = await browser.image()
-        assert image_data is not None
-        assert len(image_data) > 0
+        # Get elements and find the image
+        elements = browser.elements()
+        img_elements = [
+            (id, elem)
+            for id, elem in elements.items()
+            if elem.element_name == "img" or elem.element_name == "svg"
+        ]
+        assert len(img_elements) == 1, "Expected exactly one image element"
+        img_id, img_elem = img_elements[0]
 
-        # Test different image formats
+        # Verify image source for PNG
+        assert img_elem.attributes.get("src", "").endswith("/image/png")
+
+        # Test JPEG format
         await browser.navigate(f"{httpbin_url}/image/jpeg")
-        jpeg_data = await browser.image()
-        assert jpeg_data is not None
-        assert len(jpeg_data) > 0
+        elements = browser.elements()
+        img_elements = [
+            (id, elem)
+            for id, elem in elements.items()
+            if elem.element_name == "img" or elem.element_name == "svg"
+        ]
+        assert len(img_elements) == 1, "Expected exactly one image element"
+        img_id, img_elem = img_elements[0]
 
-        # Verify they're different formats
-        assert image_data != jpeg_data
+        # Verify JPEG image source
+        assert img_elem.attributes.get("src", "").endswith("/image/jpeg")
+
+        # Test SVG format
+        await browser.navigate(f"{httpbin_url}/image/svg")
+        elements = browser.elements()
+        img_elements = [
+            (id, elem)
+            for id, elem in elements.items()
+            if elem.element_name == "img" or elem.element_name == "svg"
+        ]
+        assert len(img_elements) == 1, "Expected exactly one image element"
+        img_id, img_elem = img_elements[0]
+
+        # For SVG, either it's an <img> with src or an inline <svg>
+        if img_elem.element_name == "img":
+            assert img_elem.attributes.get("src", "").endswith("/image/svg")
+        else:
+            assert img_elem.element_name == "svg"
+
     finally:
         await browser.close()
 

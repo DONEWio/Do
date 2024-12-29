@@ -119,12 +119,14 @@
             isInteractive: false
         };
 
-        if (['BUTTON', 'A'].includes(element.tagName)) {
+        if (element.tagName.toUpperCase() === 'SVG') {
+            elementInfo = { elementType: 'image', isInteractive: false };
+        } else if (['BUTTON', 'A'].includes(element.tagName)) {
             elementInfo = processInteractiveElement(element);
         } else if (['INPUT', 'SELECT', 'TEXTAREA'].includes(element.tagName)) {
             elementInfo = processFormElement(element);
         } else if (element.tagName === 'IMG' || element.getAttribute('role') === 'img') {
-            elementInfo = { elementType: 'icon', isInteractive: false };
+            elementInfo = { elementType: 'image', isInteractive: false };
         }
 
         // Return the same ElementMetadata structure as before
@@ -167,7 +169,7 @@
 
         function processElement(element) {
             // Skip script and style elements
-            if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
+            if (!element || element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
                 return;
             }
 
@@ -178,14 +180,28 @@
             elements[elementId] = getElementMetadata(element, elementId);
             elementId++;
 
+            // Skip processing children for SVG elements
+            if (element.tagName.toUpperCase() === 'SVG') {
+                return;
+            }
+
             // Process children
             for (const child of element.children) {
                 processElement(child);
             }
         }
 
-        // Start processing from body
-        processElement(document.body);
+        // Start processing from documentElement (html) or body if available
+        const startElement = document.body || document.documentElement;
+        if (startElement) {
+            processElement(startElement);
+        } else {
+            // If no html/body (e.g. raw SVG), process the first child
+            const firstElement = document.firstElementChild;
+            if (firstElement) {
+                processElement(firstElement);
+            }
+        }
 
         // Store elements globally for annotation system
         window.DoSeeElements = elements;

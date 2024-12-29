@@ -727,7 +727,7 @@ class WebBrowser(BaseTarget):
         extends=WebPage.evaluate,
     )
     async def evaluate(self, script: str):
-        return self._current_page().evaluate(script)
+        return await self._current_page().evaluate(script)
 
 
 class WebProcessor(BaseProcessor[Union[str, Page]]):
