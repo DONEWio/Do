@@ -4,8 +4,8 @@ requires = ["hatchling"]
 
 [project]
 authors = [
-  {name = "Kenan Deniz", email = "your.email@example.com"},
-] 
+  {name = "Kenan Deniz", email = "kenan@unrealists.com"},
+]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -15,19 +15,23 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-] 
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Internet :: WWW/HTTP :: Browsers",
+  "Topic :: Scientific/Engineering :: Image Processing",
+]
 dependencies = [
   "aiohttp>=3.9.1",
   "playwright>=1.40.0",
   "typing-extensions>=4.12.2",
   "tabulate>=0.9.0",
-] 
-description = "A Python package for web processing and vision tasks" 
-license = "MIT" 
-name = "donew" # TODO: Replace with your package name
-readme = "README.md" 
-requires-python = ">=3.8" 
-version = "0.1.0" 
+]
+description = "A Python package for web processing and vision tasks with browser automation capabilities"
+keywords = ["web automation", "vision", "browser", "playwright", "image processing"]
+license = "MIT"
+name = "donew"
+readme = "README.md"
+requires-python = ">=3.8"
+version = "0.1.0"
 
 [project.optional-dependencies]
 dev = [
