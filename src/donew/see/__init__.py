@@ -1,7 +1,7 @@
 from typing import List, Optional, Union, Sequence
 
-from src.DoNew.see.processors import BaseTarget
-from src.DoNew.see.processors.web import WebProcessor
+from src.donew.see.processors import BaseTarget
+from src.donew.see.processors.web import WebProcessor
 
 
 async def See(

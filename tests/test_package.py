@@ -2,7 +2,7 @@
 
 import pytest
 
-from DoNew import __version__
+from src.donew import __version__
 
 
 def test_version():

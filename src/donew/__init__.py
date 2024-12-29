@@ -5,13 +5,13 @@ DoNew
 Description of your package.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 from typing import Optional, Sequence, Union, cast, overload
-from src.DoNew.see.processors import BaseTarget
-from src.DoNew.see.processors.web import WebBrowser, WebProcessor
-from src.DoNew.see import See
+from src.donew.see.processors import BaseTarget
+from src.donew.see.processors.web import WebBrowser, WebProcessor
+from src.donew.see import See
 
 
 class DO:

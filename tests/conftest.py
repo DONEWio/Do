@@ -3,7 +3,7 @@ import pytest
 from typing import AsyncGenerator
 import asyncio
 import aiohttp
-from DoNew import DO
+from src.donew import DO
 
 
 def pytest_addoption(parser):

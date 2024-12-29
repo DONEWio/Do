@@ -1,6 +1,6 @@
 import pytest
-from DoNew import DO
-from DoNew.see.processors.web import WebBrowser
+from src.donew import DO
+from src.donew.see.processors.web import WebBrowser
 import asyncio
 import json
 
