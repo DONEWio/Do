@@ -1,0 +1,68 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+authors = [
+  {name = "Kenan Deniz", email = "your.email@example.com"},
+] 
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+] 
+dependencies = [
+  "aiohttp>=3.9.1",
+  "playwright>=1.40.0",
+  "typing-extensions>=4.12.2",
+  "tabulate>=0.9.0",
+] 
+description = "A Python package for web processing and vision tasks" 
+license = "MIT" 
+name = "donew" # TODO: Replace with your package name
+readme = "README.md" 
+requires-python = ">=3.8" 
+version = "0.1.0" 
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.4",
+  "pytest-asyncio>=0.25.0",
+  "pytest-cov>=4.1.0",
+  "black>=23.10.0",
+  "isort>=5.3.2",
+  "mypy>=1.14.0",
+  "ruff>=0.8.4",
+]
+
+[project.scripts]
+donew-install-browsers = "DoNew.install:install_browsers"
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+
+[tool.isort]
+multi_line_output = 3
+profile = "black"
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+addopts = "--cov=src/DoNew --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.ruff]
+ignore = []
+line-length = 88
+select = ["E", "F", "B", "I"]
+target-version = "py38"
