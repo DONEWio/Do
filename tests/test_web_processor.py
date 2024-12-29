@@ -16,9 +16,6 @@ async def test_web_processing(httpbin_url, httpbin_available):
 @pytest.mark.asyncio
 async def test_cookie_management(httpbin_url, httpbin_available):
     """Test cookie management using httpbin's cookie endpoints"""
-    DO.Config(
-        headless=False,
-    )
     browser = await DO.Browse(f"{httpbin_url}/cookies/set/test_cookie/test_value")
 
     try:
@@ -214,9 +211,6 @@ async def test_image_processing(httpbin_url, httpbin_available):
 @pytest.mark.asyncio
 async def test_element_annotation(httpbin_url, httpbin_available):
     """Test web element annotation functionality"""
-    DO.Config(
-        headless=False,
-    )
     browser = await DO.Browse(f"{httpbin_url}/forms/post")
 
     try:
@@ -246,9 +240,6 @@ async def test_element_annotation(httpbin_url, httpbin_available):
 @pytest.mark.asyncio
 async def test_browser_state(httpbin_url, httpbin_available):
     """Test browser state reporting functionality"""
-    DO.Config(
-        headless=False,
-    )
     browser = await DO.Browse(f"{httpbin_url}/forms/post")
 
     try:

@@ -3,6 +3,7 @@ import pytest
 from typing import AsyncGenerator
 import asyncio
 import aiohttp
+from DoNew import DO
 
 
 def pytest_addoption(parser):
@@ -11,6 +12,12 @@ def pytest_addoption(parser):
         default="http://localhost:8070",
         help="URL for httpbin (default: http://localhost:8070)",
     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_tests():
+    """Global test configuration that runs once before any tests"""
+    DO.Config(headless=True)
 
 
 @pytest.fixture
