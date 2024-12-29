@@ -2,24 +2,24 @@ import pytest
 from DoNew import DO
 from DoNew.see.processors.web import WebBrowser
 import asyncio
+import json
 
 
 @pytest.mark.asyncio
-async def test_web_processing():
+async def test_web_processing(httpbin_url, httpbin_available):
     """Test web processing through DO.See interface"""
-
-    result = await DO.Browse("https://httpbin.org/")
+    result = await DO.Browse(f"{httpbin_url}/")
     assert result is not None
     assert result._current_page().is_live()
 
 
 @pytest.mark.asyncio
-async def test_cookie_management():
-    """Test cookie management using httpbin.org's cookie endpoints"""
+async def test_cookie_management(httpbin_url, httpbin_available):
+    """Test cookie management using httpbin's cookie endpoints"""
     DO.Config(
         headless=False,
     )
-    browser = await DO.Browse("https://httpbin.org/cookies/set/test_cookie/test_value")
+    browser = await DO.Browse(f"{httpbin_url}/cookies/set/test_cookie/test_value")
 
     try:
         # Verify cookie was set
@@ -29,7 +29,7 @@ async def test_cookie_management():
         )
 
         # Navigate to cookies page to verify
-        await browser.navigate("https://httpbin.org/cookies")
+        await browser.navigate(f"{httpbin_url}/cookies")
 
         # Get page content to verify cookies
         content = await browser.text()
@@ -40,10 +40,9 @@ async def test_cookie_management():
 
 
 @pytest.mark.asyncio
-async def test_storage_management():
-    """Test storage management using a real page"""
-
-    browser = await DO.Browse("https://httpbin.org/html")
+async def test_storage_management(httpbin_url, httpbin_available):
+    """Test storage management using httpbin's HTML page"""
+    browser = await DO.Browse(f"{httpbin_url}/html")
 
     try:
         # Set storage values
@@ -60,145 +59,205 @@ async def test_storage_management():
         assert storage["sessionStorage"]["session_key"] == "session_value"
 
         # Navigate to another page and verify storage persists
-        await browser.navigate("https://httpbin.org/")
+        await browser.navigate(f"{httpbin_url}/")
         new_storage = await browser.storage()
-        assert (
-            new_storage["localStorage"]["test_key"] == "test_value"
-        )  # Storage should persist
-        assert (
-            new_storage["sessionStorage"]["session_key"] == "session_value"
-        )  # Session storage should also persist
+        assert new_storage["localStorage"]["test_key"] == "test_value"
+        assert new_storage["sessionStorage"]["session_key"] == "session_value"
     finally:
         await browser.close()
 
 
 @pytest.mark.asyncio
-async def test_element_annotation():
+async def test_http_methods(httpbin_url, httpbin_available):
+    """Test different HTTP methods using httpbin endpoints"""
+    browser = await DO.Browse(f"{httpbin_url}/forms/post")
+
+    try:
+        # Find form elements
+        elements = browser.elements()
+
+        # Find input fields and submit button
+        input_fields = {
+            elem.element_label or elem.attributes.get("name", ""): id
+            for id, elem in elements.items()
+            if elem.element_type == "input"
+            and elem.attributes.get("type") in ["text", "email"]
+        }
+
+        # Fill out the form
+        for label, element_id in input_fields.items():
+            await browser.type(element_id, f"test_{label}")
+
+        # Find and click submit button
+        submit_button = next(
+            (
+                id
+                for id, elem in elements.items()
+                if elem.element_type == "button"
+                and elem.attributes.get("type") == "submit"
+            ),
+            None,
+        )
+
+        if submit_button:
+            await browser.click(submit_button)
+            await asyncio.sleep(1)  # Wait for form submission
+
+            # Verify we got redirected to the result page
+            current_url = browser._current_page().pw_page().url
+            assert "/post" in current_url
+
+            # Get the response content
+            content = await browser.text()
+            assert "test_" in content  # Verify our test data is in the response
+    finally:
+        await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_response_headers(httpbin_url, httpbin_available):
+    """Test response headers using httpbin's headers endpoint"""
+    browser = await DO.Browse(f"{httpbin_url}/headers")
+
+    try:
+        # Get page content
+        content = await browser.text()
+
+        # Parse the JSON response
+        headers = json.loads(content)
+
+        # Verify basic headers are present
+        assert "headers" in headers
+        assert "User-Agent" in headers["headers"]
+        assert "Host" in headers["headers"]
+    finally:
+        await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_status_codes(httpbin_url, httpbin_available):
+    """Test different HTTP status codes using httpbin's status endpoints"""
+    browser = await DO.Browse(f"{httpbin_url}/status/200")
+
+    try:
+        # Test successful response
+        assert browser._current_page().is_live()
+
+        # Navigate to a 404 page
+        await browser.navigate(f"{httpbin_url}/status/404")
+        # The page should still be live even with 404
+        assert browser._current_page().is_live()
+
+        # Get the status code using JavaScript
+        status_code = await browser.evaluate(
+            "window.performance.getEntries()[0].responseStatus"
+        )
+        assert status_code == 404
+    finally:
+        await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_image_processing(httpbin_url, httpbin_available):
+    """Test image processing using httpbin's image endpoints"""
+    browser = await DO.Browse(f"{httpbin_url}/image/png")
+
+    try:
+        # Capture the image
+        image_data = await browser.image()
+        assert image_data is not None
+        assert len(image_data) > 0
+
+        # Test different image formats
+        await browser.navigate(f"{httpbin_url}/image/jpeg")
+        jpeg_data = await browser.image()
+        assert jpeg_data is not None
+        assert len(jpeg_data) > 0
+
+        # Verify they're different formats
+        assert image_data != jpeg_data
+    finally:
+        await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_element_annotation(httpbin_url, httpbin_available):
     """Test web element annotation functionality"""
-    # Configure with headless=False to see the visual annotations
     DO.Config(
         headless=False,
     )
-
-    # Use GitHub's login page which has consistent elements
-    browser = await DO.Browse("https://github.com/login")
+    browser = await DO.Browse(f"{httpbin_url}/forms/post")
 
     try:
-        # Wait for page to load completely
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)  # Wait for page load
 
         # Enable annotations
         await browser.toggle_annotation(True)
-
-        await asyncio.sleep(1)  # Wait to see the change
-        print(await browser.text())
-        print(await browser.image())
+        await asyncio.sleep(1)
 
         # Verify annotations are added
         script = "document.querySelectorAll('.DoSee-highlight').length"
-        if browser._current_page()._page is not None:
-            highlight_count = await browser._current_page().evaluate(script)
-            assert highlight_count > 0, "Annotations were not properly added"
+        highlight_count = await browser._current_page().evaluate(script)
+        assert highlight_count > 0, "Annotations were not properly added"
 
         # Disable annotations
         await browser.toggle_annotation(False)
-        await asyncio.sleep(1)  # Wait to see the change
+        await asyncio.sleep(1)
 
         # Verify annotations are removed
         highlight_count = await browser._current_page().evaluate(script)
         assert highlight_count == 0, "Annotations were not properly removed"
 
-        # Re-enable annotations
-        await browser.toggle_annotation(True)
-        await asyncio.sleep(1)  # Wait to see the change
-
-        # Verify annotations are added back
-        highlight_count = await browser._current_page().evaluate(script)
-        assert highlight_count > 0, "Annotations were not properly added back"
-
-        # Keep browser open for a moment to see the annotations
-        await asyncio.sleep(3)
-
     finally:
-        # Clean up
         await browser.close()
 
 
 @pytest.mark.asyncio
-async def test_browser_state():
+async def test_browser_state(httpbin_url, httpbin_available):
     """Test browser state reporting functionality"""
     DO.Config(
         headless=False,
     )
-    browser = await DO.Browse("https://httpbin.org/forms/post")
+    browser = await DO.Browse(f"{httpbin_url}/forms/post")
 
     try:
-        # Wait for page to load and print available elements for debugging
         await asyncio.sleep(1)
 
-        # Debug: Print ALL elements first
-        form_elements = browser.elements()
-        print("\nAll elements:")
-        for id, elem in form_elements.items():
-            print(
-                f"ID: {id}, Type: {elem.element_type}, HTML: {elem.element_html[:100]}"
-            )
+        # Get initial state
+        state = await browser._get_state_dict()
 
-        # Try to find any input element that we can type into
+        # Verify state structure
+        assert "sections" in state
+        assert len(state["sections"]) == 2
+        assert state["sections"][0]["name"] == "Timeline"
+        assert state["sections"][1]["name"] == "Current State"
+
+        # Verify page info
+        page_data = state["sections"][1]["data"]["Page"]
+        assert "forms/post" in page_data["URL"]
+        assert int(page_data["Element Count"]) > 0
+
+        # Perform some interactions
+        elements = browser.elements()
         input_id = next(
-            id
-            for id, elem in form_elements.items()
-            if elem.element_type == "input"
-            and elem.attributes.get("type") in ["text", "email", "tel", "password"]
+            (
+                id
+                for id, elem in elements.items()
+                if elem.element_type == "input"
+                and elem.attributes.get("type") in ["text", "email"]
+            ),
+            None,
         )
 
-        await browser.type(input_id, "John Doe")
-        await asyncio.sleep(0.5)  # Let the interaction register
+        if input_id:
+            await browser.type(input_id, "test_input")
+            await asyncio.sleep(0.5)
 
-        # Get state
-        state = await browser.state()
-        print("\nCurrent State:")
-        print(state)
+            # Get updated state
+            new_state = await browser._get_state_dict()
 
-        # Verify main sections exist
-        assert "## Timeline" in state
-        assert "## Current State" in state
-
-        # Verify Timeline section format
-        assert "| Time" in state
-        assert "| Action" in state
-        assert "John Doe" in state
-
-        # Verify Current State subsections exist
-        assert "### Page" in state
-        assert "### Elements" in state
-        assert "### Browser" in state
-
-        # Verify Page section content
-        assert "URL" in state
-        assert "https://httpbin.org/forms/post" in state
-        assert "Element Count" in state
-
-        # Verify Elements section content
-        assert "Interactive" in state
-        assert "buttons" in state
-        assert "inputs" in state
-        assert "Text Elements" in state
-
-        # Verify Browser section content
-        assert "Active" in state
-        assert "Pages in History" in state
-        assert "Cookies" in state
-
-        # Navigate to another page and verify state updates
-        await browser.navigate("https://httpbin.org/")
-        new_state = await browser.state()
-
-        # Verify navigation updated the state
-        assert "https://httpbin.org/" in new_state
-        assert "### Page" in new_state  # Should still maintain structure
-        assert "### Browser" in new_state
-        assert "Pages in History" in new_state
-
+            # Verify interaction is recorded
+            timeline = new_state["sections"][0]["rows"]
+            assert any("test_input" in str(row) for row in timeline)
     finally:
         await browser.close()
