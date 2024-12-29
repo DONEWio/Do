@@ -31,7 +31,7 @@ license = "MIT"
 name = "donew"
 readme = "README.md"
 requires-python = ">=3.8"
-version = "0.1.0"
+version = "0.1.1"
 
 [project.optional-dependencies]
 dev = [
@@ -45,7 +45,7 @@ dev = [
 ]
 
 [project.scripts]
-donew-install-browsers = "DoNew.install:install_browsers"
+donew-install-browsers = "donew.install:install_browsers"
 
 [tool.black]
 line-length = 88
@@ -62,7 +62,7 @@ warn_return_any = true
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=src/DoNew --cov-report=term-missing"
+addopts = "--cov=src/donew --cov-report=term-missing"
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -70,3 +70,6 @@ ignore = []
 line-length = 88
 select = ["E", "F", "B", "I"]
 target-version = "py38"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/donew"]
