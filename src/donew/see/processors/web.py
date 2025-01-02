@@ -95,7 +95,8 @@ class WebPage(BaseTarget):
 
             # Update elements
             self._elements = {
-                id: ElementMetadata(**metadata) for id, metadata in elements.items()
+                int(id): ElementMetadata(**metadata)
+                for id, metadata in elements.items()
             }
 
             # Re-enable annotations if needed
@@ -269,8 +270,9 @@ class WebPage(BaseTarget):
         try:
             # Get text content
             if element_id:
-                id = str(element_id)
-                element = self._elements.get(id)  # type: ignore
+                element = self._elements.get(
+                    element_id
+                )  # Now using int directly since type hint enforces it
                 if not element:
                     raise ValueError(f"No element found with ID {element_id}")
                 result = await self.pw_page().locator(element.xpath).inner_text()
