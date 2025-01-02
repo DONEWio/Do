@@ -134,7 +134,7 @@ async def test_response_headers(httpbin_url, httpbin_available):
 @pytest.mark.asyncio
 async def test_status_codes(httpbin_url, httpbin_available):
     """Test different HTTP status codes using httpbin's status endpoints"""
-    browser = await DO.Browse(f"{httpbin_url}/status/200")
+    browser = await DO.Browse(f"{httpbin_url}/status/200", {"headless": True})
 
     try:
         # Test successful response

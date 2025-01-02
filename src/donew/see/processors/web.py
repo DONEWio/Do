@@ -2,6 +2,7 @@ import time
 from typing import List, Dict, Any, Sequence, Union, Optional, Tuple
 from dataclasses import dataclass, field
 from playwright.async_api import async_playwright, Browser, Page
+import asyncio
 
 
 from . import BaseProcessor, BaseTarget, manual, public
@@ -44,6 +45,7 @@ class WebPage(BaseTarget):
     _elements: Dict[int, ElementMetadata] = field(default_factory=dict)
     _interaction_history: List[Interaction] = field(default_factory=list)
     _page: Optional[Page] = None
+    _headless: bool = True
     _annotation_enabled: bool = False
 
     async def process(self, url: str) -> "WebPage":
@@ -60,33 +62,71 @@ class WebPage(BaseTarget):
         if not self._page:
             raise ValueError("No page object available")
 
-        await self._page.goto(url)
+        if not self._headless:
+            import warnings
 
-        # Log navigation as an interaction
-        self._interaction_history.append(
-            Interaction(
-                element_id=-1,  # No element for navigation
-                interaction_type="navigate",
-                timestamp=time.time(),
-                data={"url": url},
+            warnings.warn(
+                "Running in headed mode may cause navigation errors with HTTP error responses "
+                "(like 404, 501) due to a known Chromium bug. "
+                "See: https://github.com/microsoft/playwright/issues/33962"
             )
-        )
 
-        # Inject and execute element detection script
-        with open(
-            "src/DoNew/see/processors/web/scripts/element_detection.js", "r"
-        ) as f:
-            script = f.read()
-        elements = await self._page.evaluate(script)
+        # Set up navigation handler
+        async def handle_navigation():
+            if not self._page:
+                return
 
-        # Store detected elements
-        self._elements = {
-            id: ElementMetadata(**metadata) for id, metadata in elements.items()
-        }
+            # Log navigation as an interaction
+            self._interaction_history.append(
+                Interaction(
+                    element_id=-1,  # No element for navigation
+                    interaction_type="navigate",
+                    timestamp=time.time(),
+                    data={"url": self._page.url},
+                )
+            )
 
-        # Enable annotations by default
-        if self._annotation_enabled:
-            await self.toggle_annotation(True)
+            # Re-inject and execute element detection script
+            with open(
+                "src/DoNew/see/processors/web/scripts/element_detection.js", "r"
+            ) as f:
+                script = f.read()
+            elements = await self._page.evaluate(script)
+
+            # Update elements
+            self._elements = {
+                id: ElementMetadata(**metadata) for id, metadata in elements.items()
+            }
+
+            # Re-enable annotations if needed
+            if self._annotation_enabled:
+                await self.toggle_annotation(True)
+
+        # Listen for navigation events
+        self._page.on("load", lambda _: asyncio.create_task(handle_navigation()))
+
+        # Set up route handler to continue on error responses
+        async def handle_route(route):
+            response = await route.fetch()
+            await route.fulfill(response=response)
+
+        await self._page.route("**/*", handle_route)
+
+        # Initial navigation with error handling
+        try:
+            await self._page.goto(url, wait_until="networkidle")
+        except Exception as e:
+            if "ERR_HTTP_RESPONSE_CODE_FAILURE" in str(e) and self._headless:
+                raise ValueError(
+                    "Navigation error with HTTP error responses (like 404, 501) due to a known Chromium bug. "
+                    "See: https://github.com/microsoft/playwright/issues/33962"
+                    "Try running in headless mode."
+                )
+            else:
+                raise
+
+        # Ensure we process the page after networkidle
+        await handle_navigation()
 
         return self
 
@@ -532,7 +572,9 @@ class WebBrowser(BaseTarget):
         pw_page = current_page.pw_page()
         current_page._page = None
         new_page = WebPage(
-            _page=pw_page, _annotation_enabled=current_page._annotation_enabled
+            _page=pw_page,
+            _annotation_enabled=current_page._annotation_enabled,
+            _headless=self._headless,
         )
         await new_page.process(url)
         self._pages.append(new_page)
@@ -751,7 +793,9 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
         playwright = await async_playwright().start()
         browser = await playwright.chromium.launch(headless=self._headless)
         pw_page = await browser.new_page()
-        web_page = WebPage(_page=pw_page)
+        web_page = WebPage(
+            _page=pw_page, _headless=self._headless, _annotation_enabled=False
+        )
         await web_page.process(source)
 
         web_browser = WebBrowser(

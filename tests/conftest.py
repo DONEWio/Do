@@ -17,7 +17,7 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session", autouse=True)
 def configure_tests():
     """Global test configuration that runs once before any tests"""
-    DO.Config(headless=True)
+    DO.Config(headless=False)
 
 
 @pytest.fixture
