@@ -5,7 +5,20 @@ DoNew
 Description of your package.
 """
 
-__version__ = "0.1.1"
+import tomli
+from pathlib import Path
+
+
+def _get_version():
+    try:
+        pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
+        with open(pyproject_path, "rb") as f:
+            return tomli.load(f)["project"]["version"]
+    except Exception:
+        return "unknown"
+
+
+__version__ = _get_version()
 
 
 from typing import Optional, Sequence, Union, cast, overload
