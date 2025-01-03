@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2025-01-03
+
+### Fixed
+- Fixed test discovery in VS Code by adding importlib mode
+- Fixed package imports to work correctly in installed package
+
 ## [0.1.3] - 2025-01-03
 
 ### Other
