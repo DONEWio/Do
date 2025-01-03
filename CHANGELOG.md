@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2024-01-03
+
+### Fixed
+- Fixed package distribution issues:
+  - Corrected script file paths for installed package
+  - Added proper wheel packaging configuration
+  - Implemented dynamic script loading to work in both development and installed environments
+- Restructured package assets to be properly included in distribution
+- Added proper resource loading using importlib.resources
+
 ## [0.1.4] - 2025-01-03
 
 ### Fixed

@@ -5,7 +5,7 @@ DoNew
 Description of your package.
 """
 
-__version__ = "0.1.4"  # Remember to update this when bumping version in pyproject.toml
+__version__ = "0.1.5"  # Remember to update this when bumping version in pyproject.toml
 
 from typing import Optional, Sequence, Union, cast, overload
 from donew.see.processors import BaseTarget, KeyValueSection, TableSection
