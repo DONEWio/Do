@@ -1,8 +1,8 @@
 import pytest
-from src.donew import DO
-from src.donew.see.processors.web import WebBrowser
+from donew import DO, KeyValueSection, TableSection
 import asyncio
 import json
+from typing import cast, TypedDict, Dict, Any
 
 
 @pytest.mark.asyncio
@@ -255,7 +255,10 @@ async def test_browser_state(httpbin_url, httpbin_available):
         assert state["sections"][1]["name"] == "Current State"
 
         # Verify page info
-        page_data = state["sections"][1]["data"]["Page"]
+        section = state["sections"][1]
+        assert section["type"] == "keyvalue"
+        kv_section = cast(KeyValueSection, section)
+        page_data = cast(Dict[str, str], kv_section["data"]["Page"])
         assert "forms/post" in page_data["URL"]
         assert int(page_data["Element Count"]) > 0
 
@@ -279,7 +282,7 @@ async def test_browser_state(httpbin_url, httpbin_available):
             new_state = await browser._get_state_dict()
 
             # Verify interaction is recorded
-            timeline = new_state["sections"][0]["rows"]
-            assert any("test_input" in str(row) for row in timeline)
+            timeline_section = cast(TableSection, new_state["sections"][0])
+            assert any("test_input" in str(row) for row in timeline_section["rows"])
     finally:
         await browser.close()

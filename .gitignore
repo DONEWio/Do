@@ -25,11 +25,7 @@ venv/
 env/
 ENV/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
+
 
 # Unit test / coverage reports
 htmlcov/

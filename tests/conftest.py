@@ -1,9 +1,16 @@
 import os
+import sys
 import pytest
 from typing import AsyncGenerator
 import asyncio
 import aiohttp
-from src.donew import DO
+
+# Add src directory to Python path
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+)
+
+from donew import DO
 
 
 def pytest_addoption(parser):

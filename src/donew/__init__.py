@@ -8,9 +8,19 @@ Description of your package.
 __version__ = "0.1.3"  # Remember to update this when bumping version in pyproject.toml
 
 from typing import Optional, Sequence, Union, cast, overload
-from src.donew.see.processors import BaseTarget
-from src.donew.see.processors.web import WebBrowser, WebProcessor
-from src.donew.see import See
+from donew.see.processors import BaseTarget, KeyValueSection, TableSection
+from donew.see.processors.web import WebBrowser, WebProcessor
+from donew.see import See
+
+__all__ = [
+    "DO",
+    "KeyValueSection",
+    "TableSection",
+    "BaseTarget",
+    "WebBrowser",
+    "WebProcessor",
+    "See",
+]
 
 
 class DO:

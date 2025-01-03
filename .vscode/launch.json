@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-v",
+        "--no-cov",
+        "--capture=no",
+        "-o",
+        "asyncio_mode=auto",
+        "${file}"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}",
+        "PYTEST_ADDOPTS": "--no-cov"
+      },
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

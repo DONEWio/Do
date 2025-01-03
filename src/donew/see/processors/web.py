@@ -88,7 +88,7 @@ class WebPage(BaseTarget):
 
             # Re-inject and execute element detection script
             with open(
-                "src/DoNew/see/processors/web/scripts/element_detection.js", "r"
+                "src/donew/see/processors/web/scripts/element_detection.js", "r"
             ) as f:
                 script = f.read()
             elements = await self._page.evaluate(script)
@@ -263,7 +263,7 @@ class WebPage(BaseTarget):
             raise ValueError("No live page connection")
 
         # First, temporarily modify interactive elements to show their IDs and types
-        with open("src/DoNew/see/processors/web/scripts/text_markers.js", "r") as f:
+        with open("src/donew/see/processors/web/scripts/text_markers.js", "r") as f:
             script = f.read()
         num_modified = await self._page.evaluate(script)
 
@@ -284,7 +284,7 @@ class WebPage(BaseTarget):
         finally:
             # Restore original state
             with open(
-                "src/DoNew/see/processors/web/scripts/restore_text_markers.js", "r"
+                "src/donew/see/processors/web/scripts/restore_text_markers.js", "r"
             ) as f:
                 restore_script = f.read()
             await self._page.evaluate(restore_script)
@@ -425,7 +425,7 @@ class WebPage(BaseTarget):
     async def _inject_annotation_styles(self) -> None:
         """Inject CSS styles for element annotation"""
         with open(
-            "src/DoNew/see/processors/web/scripts/highlight_styles.css", "r"
+            "src/donew/see/processors/web/scripts/highlight_styles.css", "r"
         ) as f:
             styles = f.read()
         await self._page.add_style_tag(content=styles)  # type: ignore
@@ -433,7 +433,7 @@ class WebPage(BaseTarget):
     async def _highlight_elements(self) -> None:
         """Add highlight overlays to all detected elements"""
         with open(
-            "src/DoNew/see/processors/web/scripts/highlight_elements.js", "r"
+            "src/donew/see/processors/web/scripts/highlight_elements.js", "r"
         ) as f:
             script = f.read()
         await self._page.evaluate(script)  # type: ignore

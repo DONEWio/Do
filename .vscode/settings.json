@@ -1,0 +1,13 @@
+{
+  "python.testing.pytestArgs": [
+    "tests",
+    "--no-cov",
+    "-v",
+    "-o",
+    "asyncio_mode=auto",
+    "--import-mode=importlib"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestPath": "pytest"
+}
