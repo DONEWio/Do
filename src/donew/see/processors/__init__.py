@@ -9,37 +9,68 @@ from typing import (
     Generic,
     Optional,
     Callable,
+    Protocol,
+    cast,
+    Literal,
+    TypedDict,
+    Union,
+    Mapping,
 )
 from dataclasses import dataclass, field
 import inspect
 from functools import wraps
 from tabulate import tabulate
 
+
+# Type definitions for state dictionary
+class TableSection(TypedDict):
+    name: str
+    type: Literal["table"]
+    headers: List[str]
+    rows: List[List[str]]
+
+
+class KeyValueSection(TypedDict):
+    name: str
+    type: Literal["keyvalue"]
+    data: Mapping[str, Union[str, Mapping[str, str]]]
+
+
+class StateDict(TypedDict):
+    sections: List[Union[TableSection, KeyValueSection]]
+
+
 T = TypeVar("T")  # Input type
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+class PublicMethod(Protocol):
+    _public: bool
+    _order: int
 
 
 def public(order: int = 100):
     """Decorator to mark methods as public API with optional ordering"""
 
-    def decorator(func):
+    def decorator(func: F) -> F:
         if inspect.iscoroutinefunction(func):
-            # If it's already async, wrap it preserving async
+
             @wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return await func(*args, **kwargs)
 
-            async_wrapper._public = True
-            async_wrapper._order = order
-            return async_wrapper
+            async_wrapper._public = True  # type: ignore
+            async_wrapper._order = order  # type: ignore
+            return cast(F, async_wrapper)
         else:
-            # If it's not async, don't make it async
+
             @wraps(func)
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return func(*args, **kwargs)
 
-            sync_wrapper._public = True
-            sync_wrapper._order = order
-            return sync_wrapper
+            sync_wrapper._public = True  # type: ignore
+            sync_wrapper._order = order  # type: ignore
+            return cast(F, sync_wrapper)
 
     return decorator
 
@@ -47,27 +78,27 @@ def public(order: int = 100):
 def manual(template: str, extends: Callable):
     """Decorator to mark methods as manual documentation source with templating."""
 
-    def decorator(func):
+    def decorator(func: F) -> F:
         if inspect.iscoroutinefunction(func):
-            # If it's already async, wrap it preserving async
+
             @wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return await func(*args, **kwargs)
 
-            wrapper = async_wrapper
+            wrapper = cast(F, async_wrapper)
         else:
-            # If it's not async, don't make it async
+
             @wraps(func)
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return func(*args, **kwargs)
 
-            wrapper = sync_wrapper
+            wrapper = cast(F, sync_wrapper)
 
         # Copy public/order metadata if exists
         if hasattr(extends, "_public"):
-            wrapper._public = extends._public
+            wrapper._public = extends._public  # type: ignore
         if hasattr(extends, "_order"):
-            wrapper._order = extends._order
+            wrapper._order = extends._order  # type: ignore
 
         # Get docstring from extended method
         extended_doc = extends.__doc__ or ""
@@ -152,7 +183,7 @@ class BaseTarget:
         """
         pass
 
-    def _format_state(self, state_dict: Dict[str, Any]) -> str:
+    def _format_state(self, state_dict: StateDict) -> str:
         """Convert a state dictionary to a formatted string using tabulate.
 
         This formats nested structures using markdown headers and separate tables
@@ -161,7 +192,7 @@ class BaseTarget:
         output = []
 
         def format_section(
-            name: str, data: Dict[str, Any], level: int = 2
+            name: str, data: Mapping[str, Union[str, Mapping[str, str]]], level: int = 2
         ) -> List[str]:
             """Helper to format a section with proper header level and table."""
             section_output = []
@@ -169,7 +200,7 @@ class BaseTarget:
             section_output.append(f"{'#' * level} {name}\n")
 
             # Convert dict to rows and create table
-            rows = [[k, v] for k, v in data.items()]
+            rows = [[k, str(v)] for k, v in data.items()]
             table = tabulate(rows, headers=["Property", "Value"], tablefmt="pipe")
             section_output.append(table + "\n")
             return section_output
@@ -208,7 +239,7 @@ class BaseTarget:
         return self._format_state(await self._get_state_dict())
 
     @abstractmethod
-    async def _get_state_dict(self) -> Coroutine[Dict[str, Any], Any, None]:
+    async def _get_state_dict(self) -> StateDict:
         """Get a dictionary containing the current state.
 
         Must be implemented by each processor to provide their specific

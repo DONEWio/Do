@@ -5,7 +5,7 @@ from playwright.async_api import async_playwright, Browser, Page
 import asyncio
 
 
-from . import BaseProcessor, BaseTarget, manual, public
+from . import BaseProcessor, BaseTarget, StateDict, manual, public
 
 
 @dataclass
@@ -288,69 +288,6 @@ class WebPage(BaseTarget):
             ) as f:
                 restore_script = f.read()
             await self._page.evaluate(restore_script)
-
-    def _from_bbox_to_text(
-        self, bboxes: Tuple[str, List[Tuple[int, int, int, int]]]
-    ) -> str:
-        text, _bboxes = bboxes
-        # Ensure 'text' is a list of strings
-        if isinstance(text, str):
-            text_list = text.strip().split()
-        else:
-            text_list = text
-
-        # Check if lengths match
-        if len(text_list) != len(_bboxes):
-            print("Warning: number of text elements and bounding boxes do not match.")
-            return " ".join(text_list) if isinstance(text_list, list) else text_list
-
-        # Create list of (text, bbox) tuples
-        text_bbox_pairs = list(zip(text_list, _bboxes))
-
-        # Define functions to compute the y-center and height of the bbox
-        def y_center(bbox):
-            x1, y1, x2, y2 = bbox
-            return (y1 + y2) / 2
-
-        def bbox_height(bbox):
-            x1, y1, x2, y2 = bbox
-            return abs(y2 - y1)
-
-        # Sort the text_bbox_pairs by y-center (top to bottom)
-        text_bbox_pairs.sort(key=lambda item: y_center(item[1]))
-
-        # Group the text_bbox_pairs into lines based on y-coordinate proximity
-        lines = []
-        current_line = []
-        current_y = None
-        line_threshold = 0.5  # Proportion of bbox height to consider same line
-
-        for text_elem, bbox in text_bbox_pairs:
-            yc = y_center(bbox)
-            h = bbox_height(bbox)
-            if current_y is None:
-                current_y = yc
-                current_line.append((text_elem, bbox))
-            else:
-                if abs(yc - current_y) <= h * line_threshold:
-                    current_line.append((text_elem, bbox))
-                else:
-                    # Sort the current line by x-coordinate
-                    current_line.sort(key=lambda item: (item[1][0] + item[1][2]) / 2)
-                    lines.append(current_line)
-                    current_line = [(text_elem, bbox)]
-                    current_y = yc
-
-        # Add the last line
-        if current_line:
-            current_line.sort(key=lambda item: (item[1][0] + item[1][2]) / 2)
-            lines.append(current_line)
-
-        # Concatenate text within lines and join lines
-        line_texts = [" ".join([text for text, bbox in line]) for line in lines]
-        concatenated_text = "\n".join(line_texts)
-
-        return concatenated_text
 
     async def scroll(self, element_id: int):
         """Scroll element into view"""
@@ -674,7 +611,7 @@ class WebBrowser(BaseTarget):
         """Get all elements on the current page."""
         return self._current_page().elements(bbox)
 
-    async def _get_state_dict(self) -> Dict[str, Any]:
+    async def _get_state_dict(self) -> StateDict:
         """Get browser state including page history and interactions."""
         current_page = self._current_page() if self._pages else None
 
