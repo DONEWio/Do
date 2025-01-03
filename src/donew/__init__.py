@@ -5,21 +5,7 @@ DoNew
 Description of your package.
 """
 
-import tomli
-from pathlib import Path
-
-
-def _get_version():
-    try:
-        pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
-        with open(pyproject_path, "rb") as f:
-            return tomli.load(f)["project"]["version"]
-    except Exception:
-        return "unknown"
-
-
-__version__ = _get_version()
-
+__version__ = "0.1.3"  # Remember to update this when bumping version in pyproject.toml
 
 from typing import Optional, Sequence, Union, cast, overload
 from src.donew.see.processors import BaseTarget
