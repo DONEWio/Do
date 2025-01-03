@@ -21,17 +21,19 @@ When releasing a new version of DoNew, follow these steps:
 
 3. Build and test:
    ```bash
-   pip install -e .
+   uv pip install -e .
    pytest
    ```
 
 4. Build distribution:
    ```bash
+   uv pip install build
    python -m build
    ```
 
 5. Upload to PyPI:
    ```bash
+   uv pip install twine
    python -m twine upload dist/*
    ```
 

@@ -148,14 +148,14 @@ async def search_and_extract(query: str):
 ## Development Setup
 
 1. Clone the repository
-2. Create a virtual environment:
+2. Create a virtual environment using `uv`:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 3. Install development dependencies:
 ```bash
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
 4. Install Playwright browsers:
 ```bash
