@@ -72,5 +72,11 @@ select = ["E", "F", "B", "I"]
 target-version = "py38"
 
 [tool.hatch.build]
-package-dir = ["src"]
+package-dir = "src"
 packages = ["donew"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/donew"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/donew/scripts" = "donew/scripts"

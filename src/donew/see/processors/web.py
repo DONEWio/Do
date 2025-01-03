@@ -3,9 +3,27 @@ from typing import List, Dict, Any, Sequence, Union, Optional, Tuple
 from dataclasses import dataclass, field
 from playwright.async_api import async_playwright, Browser, Page
 import asyncio
+import importlib.resources
+import os
+from pathlib import Path
 
 
 from . import BaseProcessor, BaseTarget, StateDict, manual, public
+
+
+def get_script_path(filename: str) -> str:
+    """Get the correct path for script files, handling both development and installed scenarios."""
+    # Try development path first (src layout)
+    dev_path = Path(__file__).parent.parent.parent.parent / "scripts" / "web" / filename
+    if dev_path.exists():
+        return dev_path.read_text()
+
+    # Fall back to installed package path
+    return (
+        importlib.resources.files("donew")
+        .joinpath(f"scripts/web/{filename}")
+        .read_text()
+    )
 
 
 @dataclass
@@ -87,10 +105,7 @@ class WebPage(BaseTarget):
             )
 
             # Re-inject and execute element detection script
-            with open(
-                "src/donew/see/processors/web/scripts/element_detection.js", "r"
-            ) as f:
-                script = f.read()
+            script = get_script_path("element_detection.js")
             elements = await self._page.evaluate(script)
 
             # Update elements
@@ -263,8 +278,7 @@ class WebPage(BaseTarget):
             raise ValueError("No live page connection")
 
         # First, temporarily modify interactive elements to show their IDs and types
-        with open("src/donew/see/processors/web/scripts/text_markers.js", "r") as f:
-            script = f.read()
+        script = get_script_path("text_markers.js")
         num_modified = await self._page.evaluate(script)
 
         try:
@@ -283,10 +297,7 @@ class WebPage(BaseTarget):
 
         finally:
             # Restore original state
-            with open(
-                "src/donew/see/processors/web/scripts/restore_text_markers.js", "r"
-            ) as f:
-                restore_script = f.read()
+            restore_script = get_script_path("restore_text_markers.js")
             await self._page.evaluate(restore_script)
 
     async def scroll(self, element_id: int):
@@ -424,18 +435,12 @@ class WebPage(BaseTarget):
 
     async def _inject_annotation_styles(self) -> None:
         """Inject CSS styles for element annotation"""
-        with open(
-            "src/donew/see/processors/web/scripts/highlight_styles.css", "r"
-        ) as f:
-            styles = f.read()
+        styles = get_script_path("highlight_styles.css")
         await self._page.add_style_tag(content=styles)  # type: ignore
 
     async def _highlight_elements(self) -> None:
         """Add highlight overlays to all detected elements"""
-        with open(
-            "src/donew/see/processors/web/scripts/highlight_elements.js", "r"
-        ) as f:
-            script = f.read()
+        script = get_script_path("highlight_elements.js")
         await self._page.evaluate(script)  # type: ignore
 
     async def _remove_annotations(self) -> None:
