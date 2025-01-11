@@ -147,20 +147,48 @@ async def search_and_extract(query: str):
 
 ## Development Setup
 
+### Requirements
+- Python 3.11 (required for Knowledge Graph functionality)
+- uv package manager (recommended over pip)
+
+### Installation Steps
+
 1. Clone the repository
-2. Create a virtual environment using `uv`:
 ```bash
-uv venv
+git clone https://github.com/DONEWio/donew.git
+cd donew
+```
+
+2. Install uv if you haven't already:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+3. Create and activate virtual environment:
+```bash
+uv venv -p python3.11 .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
-3. Install development dependencies:
-```bash
-uv pip install -e ".[dev]"
-```
-4. Install Playwright browsers:
+
+4. Install dependencies:
+   - For basic usage:
+   ```bash
+   uv pip install pip
+   uv pip install -e ".[dev]"
+   ```
+
+   - For Knowledge Graph functionality:
+   ```bash
+   uv pip install pip
+   uv pip install -e ".[kg,dev]"
+   uv run -- spacy download en_core_web_md
+   ```
+
+5. Install Playwright browsers:
 ```bash
 donew-install-browsers
 ```
+
 
 ## Testing
 
