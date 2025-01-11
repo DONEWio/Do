@@ -132,6 +132,10 @@ class BaseTarget:
         id = uuid.uuid4()
         return self._kg_analyzer.analyze(id, text, **kwargs)
 
+    async def query(self, text: str, **kwargs: Any) -> Dict[str, Any]:
+        """Query the knowledge graph for information"""
+        return self._kg_analyzer.query(text, params=kwargs.get("params", None))
+
     @abstractmethod
     def text(self) -> str:
         """Return the text to analyze"""

@@ -309,5 +309,14 @@ async def test_knowledge_graph_extraction(httpbin_url, httpbin_available):
             if e["text"] == "Herman Melville"
         )
 
+        # Test querying the knowledge graph
+        query_result = await browser.query(
+            "MATCH (e:Entity) WHERE e.label = $label RETURN e.text as name",
+            params={"label": "Person"},
+        )
+
+        # Verify query returns expected results
+        assert "Herman Melville" in [record.get("name") for record in query_result]
+
     finally:
         await browser.close()
