@@ -182,6 +182,8 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    uv pip install pip
    uv pip install -e ".[kg,dev]"
    uv run -- spacy download en_core_web_md
+   #uv run -- spacy download en_core_web_lg # Large web model
+   #uv run -- spacy download en_core_web_sm # Small web model
    ```
 
 5. Install Playwright browsers:
