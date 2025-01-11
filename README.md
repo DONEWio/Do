@@ -205,4 +205,47 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+# Knowledge Graph Component
+
+The Knowledge Graph component (`donew.see.graph`) provides entity and relationship extraction from text, with persistent storage in KuzuDB. This implementation is inspired by and adapted from the [GraphGeeks.org](https://live.zoho.com/PBOB6fvr6c) talk and [strwythura](https://raw.githubusercontent.com/DerwenAI/strwythura/refs/heads/main/demo.py).
+
+## Features
+
+- Named Entity Recognition using GLiNER
+- Relationship Extraction using GLiREL 
+- Graph storage and querying with KuzuDB
+- Text processing and chunking with spaCy
+
+## Graph Construction
+
+The graph is built in layers:
+
+1. **Base Layer**: Textual analysis using spaCy parse trees
+2. **Entity Layer**: Named entities and noun chunks from GLiNER
+3. **Relationship Layer**: Semantic relationships from GLiREL
+4. **Storage Layer**: Persistent graph storage in KuzuDB
+
+## Usage
+
+```python
+from donew.see.graph import KnowledgeGraph
+
+# Initialize KG (in-memory or with persistent storage)
+kg = KnowledgeGraph(db_path="path/to/db")  # or None for in-memory
+
+# Analyze text
+result = kg.analyze("""
+OpenAI CEO Sam Altman has partnered with Microsoft.
+The collaboration was announced in San Francisco.
+""")
+
+# Query the graph
+ceo_relations = kg.query("""
+MATCH (p:Entity)-[r:Relation]->(o:Entity)
+WHERE p.label = 'Person' AND o.label = 'Company'
+AND r.type = 'FOUNDER'
+RETURN p.text as Founder, o.text as Company
+ORDER BY Founder;
+""") 

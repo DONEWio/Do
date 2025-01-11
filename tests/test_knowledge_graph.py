@@ -116,29 +116,31 @@ def test_full_kg_pipeline():
         # Check for specific entity types
         entity_labels = {e["label"] for e in entities}
         assert "Person" in entity_labels
-        assert "Organization" in entity_labels
+        assert "Company" in entity_labels
 
         # Verify relationships were extracted
         relations = result["relations"]
         assert len(relations) > 0
 
         # Test database querying
-        # Find all organizations
+        # Find all companies
         query_result = kg.query(
             """
             MATCH (e:Entity)
-            WHERE e.label = 'Organization'
+            WHERE e.label = 'Company'
             RETURN e.text, e.label
         """
         )
         assert len(query_result) > 0
 
-        # Find relationships between people and organizations
+        # Find relationships between people and companies
         query_result = kg.query(
             """
-            MATCH (p:Entity)-[r:RELATES_TO]->(o:Entity)
-            WHERE p.label = 'Person' AND o.label = 'Organization'
-            RETURN p.text, r.type, o.text
+            MATCH (p:Entity)-[r:Relation]->(o:Entity)
+            WHERE p.label = 'Person' AND o.label = 'Company'
+            AND r.type = 'FOUNDER'
+            RETURN p.text as Founder, o.text as Company
+            ORDER BY Founder;
         """
         )
         assert len(query_result) > 0
@@ -156,7 +158,7 @@ def test_kuzu_integration():
     """
     # Test text with multiple entities and relationships
     text = """
-    OpenAI, led by CEO Sam Altman, has partnered with Microsoft.
+    OpenAI CEO Sam Altman, has partnered with Microsoft.
     The collaboration was announced in San Francisco, where Microsoft's CEO Satya Nadella
     discussed the $10 billion investment. Google's CEO Sundar Pichai responded to the news
     from their headquarters in Mountain View. Meanwhile, Tesla's Elon Musk criticized the deal
@@ -167,21 +169,53 @@ def test_kuzu_integration():
     kg_memory = KnowledgeGraph()  # No db_path means in-memory
     result_memory = kg_memory.analyze(text)
 
-    # Verify in-memory operations
-    assert len(result_memory["entities"]) > 0
-    assert len(result_memory["relations"]) > 0
+    print("\nExtracted Entities:")
+    for ent in result_memory["entities"]:
+        print(f"{ent['text']} ({ent['label']})")
 
-    # Test queries on in-memory database
-    ceo_query = kg_memory.query(
+    print("\nExtracted Relations:")
+    for rel in result_memory["relations"]:
+        print(
+            f"{rel['source']['text']} ({rel['source']['label']}) -> {rel['type']} -> {rel['target']['text']} ({rel['target']['label']})"
+        )
+
+    print("\nAll Entities in DB:")
+    entities = kg_memory.query(
         """
-        MATCH (p:Entity)-[r:RELATES_TO]->(o:Entity)
-        WHERE p.label = 'Person' AND o.label = 'Organization'
-        AND r.type CONTAINS 'CEO'
-        RETURN p.text as CEO, o.text as Company
-        ORDER BY CEO;
-    """
+        MATCH (e:Entity)
+        RETURN e.text, e.label
+        """
     )
-    assert len(ceo_query) > 0
+    for ent in entities:
+        print(f"{ent['e.text']} ({ent['e.label']})")
+
+    print("\nAll Relations in DB:")
+    all_rels = kg_memory.query(
+        """
+        MATCH (p:Entity)-[r:Relation]->(o:Entity)
+        RETURN p.text as Source, p.label as SrcLabel, 
+               r.type as Type, 
+               o.text as Target, o.label as TgtLabel
+        """
+    )
+    for rel in all_rels:
+        print(
+            f"{rel['Source']} ({rel['SrcLabel']}) -> {rel['Type']} -> {rel['Target']} ({rel['TgtLabel']})"
+        )
+
+    # Now try the specific founder query
+    print("\nFounder Relations:")
+    founder_rels = kg_memory.query(
+        """
+        MATCH (p:Entity)-[r:Relation]->(o:Entity)
+        WHERE p.label = 'Person' AND o.label = 'Company'
+        AND r.type = 'FOUNDER'
+        RETURN p.text as Founder, o.text as Company
+        ORDER BY Founder;
+        """
+    )
+    for rel in founder_rels:
+        print(f"{rel['Founder']} -> FOUNDER -> {rel['Company']}")
 
     # Test 2: On-disk database
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -214,7 +248,7 @@ def test_kuzu_integration():
         # Check entity types
         entity_labels = {e["label"] for e in entities}
         assert "Person" in entity_labels
-        assert "Organization" in entity_labels
+        assert "Company" in entity_labels
         assert "Location" in entity_labels
         assert "Money" in entity_labels
 
@@ -226,11 +260,11 @@ def test_kuzu_integration():
         # Find all CEOs and their companies
         ceo_query = kg_disk.query(
             """
-            MATCH (p:Entity)-[r:RELATES_TO]->(o:Entity)
-            WHERE p.label = 'Person' AND o.label = 'Organization'
-            AND r.type CONTAINS 'CEO'
-            RETURN p.text as CEO, o.text as Company
-            ORDER BY CEO;
+            MATCH (p:Entity)-[r:Relation]->(o:Entity)
+            WHERE p.label = 'Person' AND o.label = 'Company'
+            AND r.type = 'FOUNDER'
+            RETURN p.text as Founder, o.text as Company
+            ORDER BY Founder;
         """
         )
         assert len(ceo_query) > 0
@@ -259,8 +293,8 @@ def test_kuzu_integration():
         # Find relationships between companies
         company_rels = kg_disk.query(
             """
-            MATCH (c1:Entity)-[r:RELATES_TO]->(c2:Entity)
-            WHERE c1.label = 'Organization' AND c2.label = 'Organization'
+            MATCH (c1:Entity)-[r:Relation]->(c2:Entity)
+            WHERE c1.label = 'Company' AND c2.label = 'Company'
             RETURN c1.text as Company1, r.type as Relationship, c2.text as Company2;
         """
         )

@@ -1,4 +1,21 @@
-"""Knowledge Graph module for entity and relationship extraction."""
+"""Knowledge Graph module for entity and relationship extraction.
+
+This implementation is inspired by and adapted from:
+GraphGeeks.org talk 2024-08-14 https://live.zoho.com/PBOB6fvr6c
+Original source: https://raw.githubusercontent.com/DerwenAI/strwythura/refs/heads/main/demo.py
+
+The Knowledge Graph implementation uses:
+- GLiNER for Named Entity Recognition
+- GLiREL for Relationship Extraction
+- KuzuDB for graph storage and querying
+- spaCy for text processing and chunking
+
+The graph is constructed in layers:
+1. Base layer: Textual analysis using spaCy parse trees
+2. Entity layer: Named entities and noun chunks from GLiNER
+3. Relationship layer: Semantic relationships from GLiREL
+4. Storage layer: Persistent graph storage in KuzuDB
+"""
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -110,17 +127,23 @@ class KnowledgeGraph:
     # Entity labels we want to extract
 
     def __init__(self, db_path: Optional[str] = None):
-        """Initialize KG with KuzuDB storage."""
+        """Initialize KG with KuzuDB storage.
+
+        Args:
+            db_path: Path to KuzuDB database. If None, uses in-memory mode.
+                    If ":memory:", uses in-memory mode explicitly.
+                    Otherwise uses on-disk mode at the specified path.
+        """
         # Initialize NLP pipeline
         self._nlp = self._init_nlp()
 
         # Initialize KuzuDB
-        self._db = None
-        self._conn = None
-        if db_path:
-            self._db = kuzu.Database(db_path)
-            self._conn = kuzu.Connection(self._db)
-            self._init_db()
+        # Initialize database in memory or on disk
+        db_path = ":memory:" if db_path in (None, ":memory:") else db_path
+        self._db = kuzu.Database(db_path)
+
+        self._conn = kuzu.Connection(self._db)
+        self._init_db()
 
     def _init_nlp(self) -> Language:
         """Initialize NLP pipeline with spaCy, GLiNER, and GLiREL."""
@@ -157,15 +180,10 @@ class KnowledgeGraph:
             # Create Entity node table with proper schema
             self._conn.execute(
                 """
-                CREATE NODE TABLE Entity(
-                    id INTEGER,
-                    key STRING,
+                CREATE NODE TABLE IF NOT EXISTS Entity(
                     text STRING,
                     label STRING,
-                    kind STRING,
-                    chunk INTEGER,
-                    count INTEGER,
-                    PRIMARY KEY (id)
+                    PRIMARY KEY (text, label)
                 )
             """
             )
@@ -173,15 +191,16 @@ class KnowledgeGraph:
             # Create relationship table with proper schema
             self._conn.execute(
                 """
-                CREATE REL TABLE RELATES(
+                CREATE REL TABLE IF NOT EXISTS Relation(
                     FROM Entity TO Entity,
-                    rel STRING,
+                    type STRING,
                     prob FLOAT
                 )
             """
             )
-        except Exception:
-            # Tables may already exist
+        except Exception as e:
+            # Log error but continue since tables may already exist
+            logging.error(f"Error initializing database: {e}")
             pass
 
     def _uni_scrubber(self, text: str) -> str:
@@ -515,40 +534,74 @@ class KnowledgeGraph:
         if not self._conn:
             return
 
-        # Store entities
+        # First pass: store all entities
         for node_id, node_data in lex_graph.nodes(data=True):
             if node_data.get("kind") == "Entity":
-                self._conn.execute(
-                    """
-                    INSERT INTO Entity (id, key, text, label, kind, chunk, count)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                    [
-                        node_id,
-                        node_data["key"],
-                        node_data["text"],
-                        node_data["label"],
-                        node_data["kind"],
-                        node_data["chunk"],
-                        node_data["count"],
-                    ],
-                )
+                try:
+                    self._conn.execute(
+                        """
+                        MERGE (e:Entity {text: ?, label: ?})
+                        """,
+                        [node_data["text"], node_data["label"]],
+                    )
+                except Exception as e:
+                    logging.error(f"Error storing entity: {e}")
+                    pass
 
-        # Store relationships
+        # Second pass: store relationships
         for src, dst, edge_data in lex_graph.edges(data=True):
-            self._conn.execute(
-                """
-                MATCH (e1:Entity), (e2:Entity)
-                WHERE e1.id = ? AND e2.id = ?
-                CREATE (e1)-[r:RELATES {rel: ?, prob: ?}]->(e2)
-            """,
-                [src, dst, edge_data["rel"], edge_data.get("prob", 1.0)],
-            )
+            src_data = lex_graph.nodes[src]
+            dst_data = lex_graph.nodes[dst]
+
+            if src_data.get("kind") == "Entity" and dst_data.get("kind") == "Entity":
+                # Only store meaningful relationships (not CO_OCCURS_WITH)
+                if edge_data["rel"] != "CO_OCCURS_WITH":
+                    try:
+                        self._conn.execute(
+                            """
+                            MATCH (e1:Entity {text: ?, label: ?}), 
+                                  (e2:Entity {text: ?, label: ?})
+                            CREATE (e1)-[r:Relation {type: ?, prob: ?}]->(e2)
+                            """,
+                            [
+                                src_data["text"],
+                                src_data["label"],
+                                dst_data["text"],
+                                dst_data["label"],
+                                edge_data["rel"],
+                                edge_data.get("prob", 1.0),
+                            ],
+                        )
+                    except Exception as e:
+                        logging.error(f"Error creating relationship: {e}")
+                        pass
 
     def query(self, cypher_query: str) -> List[Dict]:
-        """Execute a Cypher query against the knowledge graph."""
+        """Execute a Cypher query against the knowledge graph.
+
+        Args:
+            cypher_query: The Cypher query to execute
+
+        Returns:
+            List of dictionaries containing query results
+        """
         if not self._conn:
             return []
 
-        result = self._conn.execute(cypher_query)
-        return [dict(row) for row in result]
+        try:
+            result = self._conn.execute(cypher_query)
+            results = []
+
+            while result.has_next():
+                row = result.get_next()
+                # Convert row to dict and clean any None values
+                row_dict = {
+                    k: v for k, v in zip(result.column_names, row) if v is not None
+                }
+                if row_dict:  # Only add non-empty results
+                    results.append(row_dict)
+
+            return results
+        except Exception as e:
+            logging.error(f"Error executing query: {e}")
+            return []
