@@ -133,19 +133,30 @@ class KnowledgeGraph:
 
     # Constants and configuration
     CHUNK_SIZE: int = 2048
-    GLINER_MODEL: str = "urchade/gliner_small-v2.1"
-    SPACY_MODEL: str = "en_core_web_md"
+    GLINER_MODEL: str = "urchade/gliner_multi-v2.1"  # Multi-language model
+    SPACY_MODEL: str = "en_core_web_lg"  # Large web model
 
     # Entity labels we want to extract
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(
+        self,
+        db_path: Optional[str] = None,
+        gliner_model: Optional[str] = None,
+        spacy_model: Optional[str] = None,
+    ):
         """Initialize KG with KuzuDB storage.
 
         Args:
             db_path: Path to KuzuDB database. If None, uses in-memory mode.
                     If ":memory:", uses in-memory mode explicitly.
                     Otherwise uses on-disk mode at the specified path.
+            gliner_model: Optional GLiNER model name. Defaults to multi-language model.
+            spacy_model: Optional spaCy model name. Defaults to large web model.
         """
+        # Set model names
+        self._gliner_model = gliner_model or self.GLINER_MODEL
+        self._spacy_model = spacy_model or self.SPACY_MODEL
+
         # Initialize NLP pipeline
         self._nlp = self._init_nlp()
 
@@ -165,13 +176,13 @@ class KnowledgeGraph:
         os.environ["TOKENIZERS_PARALLELISM"] = "0"
 
         # Load spaCy model
-        nlp = spacy.load(self.SPACY_MODEL)
+        nlp = spacy.load(self._spacy_model)
 
         # Add GLiNER
         nlp.add_pipe(
             "gliner_spacy",
             config={
-                "gliner_model": self.GLINER_MODEL,
+                "gliner_model": self._gliner_model,
                 "labels": NER_LABELS,
                 "chunk_size": self.CHUNK_SIZE,
                 "style": "ent",

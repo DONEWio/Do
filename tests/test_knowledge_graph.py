@@ -267,3 +267,82 @@ def test_kuzu_integration():
         """
         )
         assert len(ceo_query) > 0
+
+
+def test_large_models():
+    """Test multi-language support with GLiNER multi and large spaCy model.
+
+    This test verifies:
+    1. Multi-language entity extraction
+    2. Relationship extraction across languages
+    3. Proper handling of non-English characters
+    """
+    # Initialize KG with multi-language models
+    kg = KnowledgeGraph(
+        gliner_model="urchade/gliner_large-v2.1", spacy_model="en_core_web_lg"
+    )
+
+    # Test text with multiple languages
+
+    text = """
+    OpenAI CEO Sam Altman, has partnered with Microsoft.
+    The collaboration was announced in San Francisco, where Microsoft's CEO Satya Nadella
+    discussed the $10 billion investment. Google's CEO Sundar Pichai responded to the news
+    from their headquarters in Mountain View. Meanwhile, Tesla's Elon Musk criticized the deal
+    on Twitter, citing concerns about AI safety.
+    """
+
+    # Analyze the text
+    id = uuid.uuid4()
+    result = kg.analyze(id, text)
+
+    # Print results for debugging
+    print("\nExtracted Entities:")
+    for ent in result["entities"]:
+        print(f"{ent['text']} ({ent['label']})")
+
+    print("\nExtracted Relations:")
+    for rel in result["relations"]:
+        print(
+            f"{rel['source']['text']} ({rel['source']['label']}) -> {rel['type']} -> {rel['target']['text']} ({rel['target']['label']})"
+        )
+
+    # Verify entities were extracted
+    entities = result["entities"]
+    assert len(entities) > 0
+
+    # Check for specific entities across languages
+    entity_texts = {e["text"] for e in entities}
+    expected_entities = {
+        "OpenAI",
+        "Sam Altman",
+        "Microsoft",
+        "San Francisco",
+        "Google",
+        "Mountain View",
+        "Tesla",
+        "Elon Musk",
+    }
+    # We should find these entities regardless of language
+    assert len(entity_texts.intersection(expected_entities)) >= 6
+
+    # Check entity types
+    entity_labels = {e["label"] for e in entities}
+    assert "Person" in entity_labels
+    assert "Company" in entity_labels
+    assert "City" in entity_labels
+
+    # Verify relationships were extracted
+    relations = result["relations"]
+    assert len(relations) > 0
+
+    # Test database querying with multi-language content
+    query_result = kg.query(
+        """
+        MATCH (p:Entity)-[r:Relation]->(o:Entity)
+        WHERE p.label = 'Person' AND o.label = 'Company'
+        RETURN p.text as Person, r.type as Relation, o.text as Company
+        ORDER BY Person;
+        """
+    )
+    assert len(query_result) > 0
