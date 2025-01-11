@@ -19,7 +19,10 @@ from typing import (
 from dataclasses import dataclass, field
 import inspect
 from functools import wraps
+import uuid
 from tabulate import tabulate
+
+from donew.see.graph import KnowledgeGraph
 
 
 # Type definitions for state dictionary
@@ -120,6 +123,19 @@ class BaseTarget:
     _text_content: List[str] = field(default_factory=list)
     _debug_info: Dict[str, Any] = field(default_factory=dict)
     _metadata: Dict[str, Any] = field(default_factory=dict)
+    _kg_analyzer: Optional[KnowledgeGraph] = None
+
+    async def analyze(self, **kwargs: Any) -> Dict[str, Any]:
+        if self._kg_analyzer is None:
+            self._kg_analyzer = KnowledgeGraph()
+        text = await self.text()
+        id = uuid.uuid4()
+        return self._kg_analyzer.analyze(id, text, **kwargs)
+
+    @abstractmethod
+    def text(self) -> str:
+        """Return the text to analyze"""
+        raise NotImplementedError("text() method must be implemented by subclass")
 
     def manuals(self) -> List[str]:
         """Returns a list of documentation strings for all public methods in order.

@@ -286,3 +286,28 @@ async def test_browser_state(httpbin_url, httpbin_available):
             assert any("test_input" in str(row) for row in timeline_section["rows"])
     finally:
         await browser.close()
+
+
+@pytest.mark.asyncio
+async def test_knowledge_graph_extraction(httpbin_url, httpbin_available):
+    """Test Knowledge Graph extraction from web content"""
+    # First browse to a page with structured content
+    browser = await DO.Browse(
+        f"{httpbin_url}/html"
+    )  # local version of https://httpbin.org/html
+
+    try:
+        # Get the page content
+        result = await browser.analyze()
+
+        entities = result["entities"]
+
+        # Verify basic HTML structure entities
+        assert any(
+            e["text"] == "Herman Melville" and e["label"] == "Person"
+            for e in entities
+            if e["text"] == "Herman Melville"
+        )
+
+    finally:
+        await browser.close()

@@ -34,7 +34,7 @@ from icecream import ic
 import os
 import glirel
 import unicodedata
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -365,7 +365,9 @@ class KnowledgeGraph:
 
             if (chunk_total + line_len) > self.CHUNK_SIZE:
                 # Emit current chunk
-                chunk_list.append(TextChunk(uid=chunk_id, text="\n".join(chunks)))
+                chunk_list.append(
+                    TextChunk(id=id, chunk_id=chunk_id, text="\n".join(chunks))
+                )
                 # Start new chunk
                 chunks = [prev_line, line]
                 chunk_total = len(prev_line) + line_len
@@ -651,13 +653,14 @@ class KnowledgeGraph:
 
         return df
 
-    def analyze(self, id: uuid.UUID, text: str, *, debug: bool = False) -> Dict:
+    def analyze(self, id: uuid.UUID, text: str, **kwargs: Any) -> Dict:
         """Analyze text to extract entities and relationships."""
         # Initialize processing structures
         chunk_list: List[TextChunk] = []
         lex_graph: nx.Graph = nx.Graph()
         sem_overlay: nx.Graph = nx.Graph()
         known_lemma: List[str] = []
+        debug: bool = kwargs.get("debug", False)
 
         # Split text into chunks and process with GLiREL labels
         doc: spacy.tokens.doc.Doc = list(
@@ -728,14 +731,20 @@ class KnowledgeGraph:
             lex_graph,
         )
 
-        ic(df.head(20))
-
         # Convert to return format
         entities = []
         relations = []
 
+        exclude_entity_types: List[str] = kwargs.get("exclude_entity_types", ["NP"])
+        exclude_relation_types: List[str] = kwargs.get(
+            "exclude_relation_types", ["CO_OCCURS_WITH", "FOLLOWS_LEXICALLY"]
+        )
+
         for node_id, node_data in lex_graph.nodes(data=True):
             if node_data.get("kind") == "Entity":
+                if node_data["label"] in exclude_entity_types:
+                    continue
+
                 entities.append(
                     {
                         "text": node_data["text"],
@@ -747,6 +756,9 @@ class KnowledgeGraph:
             src_data = lex_graph.nodes[src]
             dst_data = lex_graph.nodes[dst]
             if src_data.get("kind") == "Entity" and dst_data.get("kind") == "Entity":
+                if edge_data["rel"] in exclude_relation_types:
+                    continue
+
                 relations.append(
                     {
                         "source": {
