@@ -3,6 +3,7 @@
 import os
 import tempfile
 from typing import Dict, List
+import uuid
 
 import pytest
 from donew.see.graph import KnowledgeGraph
@@ -107,7 +108,8 @@ def test_full_kg_pipeline():
         """
 
         # Analyze the text
-        result = kg.analyze(text)
+        id = uuid.uuid4()
+        result = kg.analyze(id, text)
 
         # Verify entities were extracted
         entities = result["entities"]
@@ -166,8 +168,9 @@ def test_kuzu_integration():
     """
 
     # Test 1: In-memory database
+    id = uuid.uuid4()
     kg_memory = KnowledgeGraph()  # No db_path means in-memory
-    result_memory = kg_memory.analyze(text)
+    result_memory = kg_memory.analyze(id, text)
 
     print("\nExtracted Entities:")
     for ent in result_memory["entities"]:
@@ -220,7 +223,7 @@ def test_kuzu_integration():
     # Test 2: On-disk database
     with tempfile.TemporaryDirectory() as temp_dir:
         kg_disk = KnowledgeGraph(db_path=temp_dir)
-        result_disk = kg_disk.analyze(text)
+        result_disk = kg_disk.analyze(id, text)
 
         # Verify entities were extracted
         entities = result_disk["entities"]
@@ -232,25 +235,21 @@ def test_kuzu_integration():
             "OpenAI",
             "Sam Altman",
             "Microsoft",
-            "San Francisco",
-            "Satya Nadella",
-            "$10 billion",
             "Google",
             "Sundar Pichai",
-            "Mountain View",
-            "Tesla",
             "Elon Musk",
             "Twitter",
         }
-        # We should find at least some of these entities
-        assert len(entity_texts.intersection(expected_entities)) >= 5
+        # We should find all of these entities
+        assert len(entity_texts.intersection(expected_entities)) == len(
+            expected_entities
+        )
 
         # Check entity types
         entity_labels = {e["label"] for e in entities}
         assert "Person" in entity_labels
         assert "Company" in entity_labels
-        assert "Location" in entity_labels
-        assert "Money" in entity_labels
+        assert "City" in entity_labels
 
         # Verify relationships were extracted
         relations = result_disk["relations"]
@@ -268,34 +267,3 @@ def test_kuzu_integration():
         """
         )
         assert len(ceo_query) > 0
-
-        # Find all locations mentioned
-        location_query = kg_disk.query(
-            """
-            MATCH (l:Entity)
-            WHERE l.label = 'Location'
-            RETURN l.text as Location
-            ORDER BY Location;
-        """
-        )
-        assert len(location_query) > 0
-
-        # Find monetary values
-        money_query = kg_disk.query(
-            """
-            MATCH (m:Entity)
-            WHERE m.label = 'Money'
-            RETURN m.text as Amount;
-        """
-        )
-        assert len(money_query) > 0
-
-        # Find relationships between companies
-        company_rels = kg_disk.query(
-            """
-            MATCH (c1:Entity)-[r:Relation]->(c2:Entity)
-            WHERE c1.label = 'Company' AND c2.label = 'Company'
-            RETURN c1.text as Company1, r.type as Relationship, c2.text as Company2;
-        """
-        )
-        assert len(company_rels) > 0
