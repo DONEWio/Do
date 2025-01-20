@@ -198,7 +198,7 @@ playwright install # or all browsers
 
 Run the test suite:
 ```bash
-pytest tests/
+pytest tests/ --httpbin-url=https://httpbin.org
 ```
 
 For more detailed testing options, including using local or remote httpbin, see the [Testing Documentation](docs/testing.md). (#TODO)

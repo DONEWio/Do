@@ -132,7 +132,7 @@ class KnowledgeGraph:
     """Knowledge graph with KuzuDB storage."""
 
     # Constants and configuration
-    CHUNK_SIZE: int = 2048
+    CHUNK_SIZE: int = 384
     GLINER_MODEL: str = "urchade/gliner_multi-v2.1"  # Multi-language model
     SPACY_MODEL: str = "en_core_web_md"  # Large web model
 
