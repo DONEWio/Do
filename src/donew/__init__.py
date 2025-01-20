@@ -15,6 +15,7 @@ from donew.see.processors.web import WebBrowser, WebProcessor
 from donew.see import See
 from donew.new.doers.super import SuperDoer
 from donew.new.runtime import Runtime
+from donew.utils import run_sync
 
 __all__ = [
     "DO",
@@ -50,19 +51,11 @@ class DO:
 
     @staticmethod
     def _sync(coro: Any) -> Any:
-        if asyncio.events._get_running_loop() is not None:
-            raise RuntimeError(
-                """It looks like you are using DO's sync API inside an async context.
-Please use the async methods (A_browse, A_new) instead."""
-            )
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(coro)
-        finally:
-            loop.close()
-            asyncio.set_event_loop(None)
+        return run_sync(
+            coro,
+            """It looks like you are using DO's sync API inside an async context.
+Please use the async methods (A_browse, A_new) instead.""",
+        )
 
     @staticmethod
     async def A_browse(

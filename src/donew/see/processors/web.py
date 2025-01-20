@@ -504,7 +504,15 @@ class WebBrowser(BaseTarget):
         return self._pages[-1]
 
     @public(order=1)
-    async def navigate(self, url: str):
+    def navigate(self, url: str):
+        """Navigate to a URL in a new page.
+
+        Args:
+            url (str): The URL to navigate to.
+        """
+        return self._sync(self.a_navigate(url))
+
+    async def a_navigate(self, url: str):
         """Navigate to a URL in a new page.
 
         Args:
@@ -528,7 +536,15 @@ class WebBrowser(BaseTarget):
         template="Extends page annotation to browser level: {extendee}",
         extends=WebPage.toggle_annotation,
     )
-    async def toggle_annotation(self, enabled: bool = True) -> None:
+    def toggle_annotation(self, enabled: bool = True) -> None:
+        """Toggle visual annotation of elements on the current page.
+
+        Args:
+            enabled: Whether to enable or disable annotation
+        """
+        return self._sync(self.a_toggle_annotation(enabled))
+
+    async def a_toggle_annotation(self, enabled: bool = True) -> None:
         """Toggle visual annotation of elements on the current page.
 
         Args:
@@ -542,7 +558,12 @@ class WebBrowser(BaseTarget):
         template="Get/Set cookies from current page: {extendee}",
         extends=WebPage.cookies,
     )
-    async def cookies(
+    def cookies(
+        self, cookies: Optional[Dict[str, str]] = None
+    ) -> Sequence[Dict[str, str]]:
+        return self._sync(self.a_cookies(cookies))
+
+    async def a_cookies(
         self, cookies: Optional[Dict[str, str]] = None
     ) -> Sequence[Dict[str, str]]:
         return await self._current_page().cookies(cookies)
@@ -552,7 +573,12 @@ class WebBrowser(BaseTarget):
         template="Get/Set storage state from current page: {extendee}",
         extends=WebPage.storage,
     )
-    async def storage(
+    def storage(
+        self, storage_state: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Dict[str, str]]:
+        return self._sync(self.a_storage(storage_state))
+
+    async def a_storage(
         self, storage_state: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Dict[str, str]]:
         return await self._current_page().storage(storage_state)
@@ -562,7 +588,10 @@ class WebBrowser(BaseTarget):
         template="Click an element: {extendee}",
         extends=WebPage.click,
     )
-    async def click(self, element_id: int):
+    def click(self, element_id: int):
+        return self._sync(self.a_click(element_id))
+
+    async def a_click(self, element_id: int):
         return await self._current_page().click(element_id)
 
     @public(order=5)
@@ -570,7 +599,10 @@ class WebBrowser(BaseTarget):
         template="Type text into an element: {extendee}",
         extends=WebPage.type,
     )
-    async def type(self, element_id: int, text: str):
+    def type(self, element_id: int, text: str):
+        return self._sync(self.a_type(element_id, text))
+
+    async def a_type(self, element_id: int, text: str):
         return await self._current_page().type(element_id, text)
 
     @public(order=5)
@@ -578,28 +610,51 @@ class WebBrowser(BaseTarget):
         template="Get image content from an element: {extendee}",
         extends=WebPage.image,
     )
-    async def image(
+    def image(
         self,
         element_id: Optional[int] = None,
         bbox: Optional[Tuple[float, float, float, float]] = None,
         viewport: Optional[bool] = None,
     ) -> bytes:
-        return await self._current_page().image(element_id, bbox, viewport)
+        """Get image content from an element."""
+        return self._sync(self.a_image(element_id, bbox, viewport))
+
+    async def a_image(
+        self,
+        element_id: Optional[int] = None,
+        bbox: Optional[Tuple[float, float, float, float]] = None,
+        viewport: Optional[bool] = None,
+    ) -> bytes:
+        """Async version of image."""
+        return await self._current_page().a_image(element_id, bbox, viewport)
 
     @public(order=5)
     @manual(
         template="Get text content from an element: {extendee}",
         extends=WebPage.text,
     )
-    async def text(
-        self,
-        element_id: Optional[int] = None,
-    ) -> str:
+    def text(self, element_id: Optional[int] = None) -> str:
+        return self._sync(self.a_text(element_id))
+
+    async def a_text(self, element_id: Optional[int] = None) -> str:
+        """Async version of text."""
         return await self._current_page().text(element_id)
 
+    def text(self, element_id: Optional[int] = None) -> str:
+        """Get text content from an element."""
+        return self._sync(self.a_text(element_id))
+
     @public(order=6)
-    async def close(self):
+    @manual(
+        template="Close the browser: {extendee}",
+        extends=WebPage.close,
+    )
+    def close(self):
         """Close the browser and clean up resources."""
+        return self._sync(self.a_close())
+
+    async def a_close(self):
+        """Async version of close."""
         if self._browser:
             await self._browser.close()
             self._browser = None
@@ -712,26 +767,29 @@ class WebBrowser(BaseTarget):
         template="{extendee}",
         extends=WebPage.evaluate,
     )
-    async def evaluate(self, script: str):
+    def evaluate(self, script: str) -> Any:
+        """Evaluate JavaScript in the current page."""
+        return self._sync(self.a_evaluate(script))
+
+    async def a_evaluate(self, script: str) -> Any:
+        """Async version of evaluate."""
         return await self._current_page().evaluate(script)
 
 
 class WebProcessor(BaseProcessor[Union[str, Page]]):
     """Main processor for web page analysis and interaction."""
 
-    _headless: bool = True
-
     def __init__(self, headless: bool = True):
         self._headless = headless
 
-    async def process(self, source: str) -> List[WebBrowser]:
-        """Process a URL or Page object and return a WebBrowser target.
+    async def a_process(self, source: Union[str, Page]) -> List[BaseTarget]:
+        """Async version of process.
 
         Args:
-            source (Union[str, Page]): The URL to process or an existing Page object.
+            source: The URL to process or an existing Page object.
 
         Returns:
-            List[WebBrowser]: A list containing the WebBrowser instance.
+            List[BaseTarget]: A list containing the WebBrowser instance.
         """
         # Initialize Playwright and browser
         playwright = await async_playwright().start()
@@ -747,3 +805,14 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
         )
 
         return [web_browser]
+
+    def process(self, source: Union[str, Page]) -> List[BaseTarget]:
+        """Sync version of process.
+
+        Args:
+            source: The URL to process or an existing Page object.
+
+        Returns:
+            List[BaseTarget]: A list containing the WebBrowser instance.
+        """
+        return self._sync(self.a_process(source))

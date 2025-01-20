@@ -1,14 +1,38 @@
 import os
 from dotenv import load_dotenv
 import pytest
-from typing import Any
+from typing import Any, Optional
 from donew import DO
 from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
 from smolagents import LiteLLMModel
+from smolagents.models import ChatMessage, MessageRole
 
 
 class MockModel:
+    def __init__(self):
+        self.last_input_token_count = None
+        self.last_output_token_count = None
+
+    def get_token_counts(self) -> dict[str, int]:
+        return {
+            "input_token_count": self.last_input_token_count,
+            "output_token_count": self.last_output_token_count,
+        }
+
+    def __call__(
+        self,
+        messages: list[dict[str, str]],
+        stop_sequences: Optional[list[str]] = None,
+        grammar: Optional[str] = None,
+    ) -> ChatMessage:
+        # Extract the last message content and return with Processed: prefix
+        prompt = messages[-1]["content"]
+        return ChatMessage(
+            role=MessageRole.ASSISTANT, content=f"Processed: {prompt}", tool_calls=None
+        )
+
+    # For backward compatibility with older tests
     async def generate(self, prompt: str, **kwargs) -> str:
         return f"Processed: {prompt}"
 
@@ -41,23 +65,30 @@ async def test_method_chaining():
     prompt = "test task"
 
     def verify_output(result: str) -> bool:
-        return f"Processed: {prompt}" == result
+        expected = f"Processed: Based on the above, please provide an answer to the following user request:\n{prompt}"
+        return expected == result
 
     # Method chaining
 
     doer = await DO.A_new({"model": MockModel()})
     result = await doer.realm([ctx]).envision({"verify": verify_output}).enact(prompt)
-    assert "Processed: test task" in result
+    assert (
+        f"Processed: Based on the above, please provide an answer to the following user request:\n{prompt}"
+        == result
+    )
 
     # Alternative style
     task = doer.realm([ctx])
     result = await task.enact("test task")
-    assert "Processed: test task" in result
+    assert (
+        f"Processed: Based on the above, please provide an answer to the following user request:\n{prompt}"
+        == result
+    )
 
 
 @pytest.mark.asyncio
 async def test_immutability():
-    doer = await DO.New({"model": MockModel()})
+    doer = await DO.A_new({"model": MockModel()})
     ctx1 = MockProvision("first")
     ctx2 = MockProvision("second")
 
@@ -70,9 +101,8 @@ async def test_immutability():
     assert doer2._provisions[0].name == "second"
 
 
-@pytest.mark.asyncio
-async def test_expect_constraints():
-    doer = await DO.New({"model": MockModel()})
+def test_expect_constraints():
+    doer = DO.New({"model": MockModel()})
 
     def verify_output(result: str) -> bool:
         return "output.txt" in result
@@ -86,20 +116,19 @@ async def test_expect_constraints():
     assert doer._constraints is None
 
 
-@pytest.mark.asyncio
-async def test_realm_and_envision_chain():
-    doer = await DO.New({"model": MockModel()})
+def test_realm_and_envision_chain():
+    doer = DO.New({"model": MockModel()})
     ctx = MockProvision("test")
 
     def verify_output(result: str) -> bool:
         return "Processed:" in result
 
     # Chain both realm and envision
-    result = await doer.realm([ctx]).envision({"verify": verify_output}).enact("test")
+    result = doer.realm([ctx]).envision({"verify": verify_output}).enact("test")
     assert "Processed:" in result
 
     # Alternative order
-    result = await doer.envision({"verify": verify_output}).realm([ctx]).enact("test")
+    result = doer.envision({"verify": verify_output}).realm([ctx]).enact("test")
     assert "Processed:" in result
 
 
@@ -109,12 +138,11 @@ def fibonacci(n: int) -> int:
     return fibonacci(n - 1) + fibonacci(n - 2)
 
 
-@pytest.mark.asyncio
-async def test_code_agent():
+def test_code_agent():
     load_dotenv()
 
     model = LiteLLMModel(model_id="deepseek/deepseek-chat")
-    doer = await DO.A_new({"model": model})
-    browser = await DO.A_browse(["https://www.unrealists.com"])
-    result = await doer.enact("calculate fibonacci of 10")
+    doer = DO.New({"model": model})
+    browser = DO.A_browse(["https://www.unrealists.com"])
+    result = doer.enact("calculate fibonacci of 10")
     assert fibonacci(10) == int(result)

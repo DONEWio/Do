@@ -18,12 +18,12 @@ class SuperDoer(BaseDoer):
         """Return new instance with provisions"""
         return replace(self, _provisions=provisions)
 
-    async def enact(self, task: str, params: Optional[dict[str, Any]] = None) -> Any:
+    def enact(self, task: str, params: Optional[dict[str, Any]] = None) -> Any:
         """Execute a task with validation and context management"""
         try:
             # Setup contexts in sequence
             for ctx in self._provisions:
-                await ctx.setup()
+                ctx.setup()
 
             # Format task with params if provided
             formatted_task = task.format(**params) if params else task
@@ -46,4 +46,4 @@ class SuperDoer(BaseDoer):
         finally:
             # Cleanup contexts in reverse order
             for ctx in reversed(self._provisions):
-                await ctx.cleanup()
+                ctx.cleanup()

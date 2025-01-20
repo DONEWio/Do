@@ -21,8 +21,10 @@ import inspect
 from functools import wraps
 import uuid
 from tabulate import tabulate
+import asyncio
 
 from donew.see.graph import KnowledgeGraph
+from donew.utils import run_sync
 
 
 # Type definitions for state dictionary
@@ -116,7 +118,11 @@ def manual(template: str, extends: Callable):
 
 @dataclass
 class BaseTarget:
-    """Base class for all targets"""
+    """Base class for all targets.
+
+    Targets represent processed data that can be analyzed and queried.
+    Each target should implement both sync and async interfaces.
+    """
 
     _annotated_image: str = ""  # base64 encoded
     _raw_image: str = ""  # base64 encoded
@@ -125,21 +131,36 @@ class BaseTarget:
     _metadata: Dict[str, Any] = field(default_factory=dict)
     _kg_analyzer: Optional[KnowledgeGraph] = None
 
-    async def analyze(self, **kwargs: Any) -> Dict[str, Any]:
+    def _sync(self, coro: Any) -> Any:
+        """Run an async operation synchronously.
+
+        This provides sync interface to async methods.
+        """
+        return run_sync(
+            coro,
+            """It looks like you are using the sync API inside an async context.
+Please use the async methods (a_*) instead.""",
+        )
+
+    async def a_analyze(self, **kwargs: Any) -> Dict[str, Any]:
+        """Async version of analyze."""
         if self._kg_analyzer is None:
             self._kg_analyzer = KnowledgeGraph()
-        text = await self.text()
+        text = await self.a_text()
         id = uuid.uuid4()
         return self._kg_analyzer.analyze(id, text, **kwargs)
 
-    async def query(self, text: str, **kwargs: Any) -> Dict[str, Any]:
-        """Query the knowledge graph for information"""
+    def analyze(self, **kwargs: Any) -> Dict[str, Any]:
+        """Synchronous analyze operation."""
+        return self._sync(self.a_analyze(**kwargs))
+
+    async def a_query(self, text: str, **kwargs: Any) -> Dict[str, Any]:
+        """Async version of query."""
         return self._kg_analyzer.query(text, params=kwargs.get("params", None))
 
-    @abstractmethod
-    def text(self) -> str:
-        """Return the text to analyze"""
-        raise NotImplementedError("text() method must be implemented by subclass")
+    def query(self, text: str, **kwargs: Any) -> Dict[str, Any]:
+        """Synchronous query operation."""
+        return self._sync(self.a_query(text, **kwargs))
 
     def manuals(self) -> List[str]:
         """Returns a list of documentation strings for all public methods in order.
@@ -253,25 +274,64 @@ class BaseTarget:
 
         return "\n".join(output)
 
-    async def state(self) -> str:
-        """Get a formatted string describing the current state.
-        Each processor must implement _get_state_dict()."""
-        return self._format_state(await self._get_state_dict())
+    async def a_state(self) -> str:
+        """Async version of state."""
+        return self._format_state(await self.a_get_state_dict())
+
+    def state(self) -> str:
+        """Synchronous state operation."""
+        return self._sync(self.a_state())
 
     @abstractmethod
-    async def _get_state_dict(self) -> StateDict:
-        """Get a dictionary containing the current state.
-
-        Must be implemented by each processor to provide their specific
-        state information in the format expected by _format_state().
-        """
+    async def a_get_state_dict(self) -> StateDict:
+        """Async version of get_state_dict."""
         pass
+
+    def get_state_dict(self) -> StateDict:
+        """Synchronous get_state_dict operation."""
+        return self._sync(self.a_get_state_dict())
 
 
 class BaseProcessor(ABC, Generic[T]):
-    """Base class for all processors"""
+    """Base class for all processors.
+
+    Processors handle converting input sources into Targets.
+    Each processor should implement both sync and async interfaces.
+    """
+
+    def _sync(self, coro: Any) -> Any:
+        """Run an async operation synchronously.
+
+        This provides sync interface to async methods.
+        """
+        return run_sync(
+            coro,
+            """It looks like you are using the sync API inside an async context.
+Please use the async methods (a_*) instead.""",
+        )
 
     @abstractmethod
-    async def process(self, source: T) -> List[BaseTarget]:
-        """Process the input and return list of targets"""
+    async def a_process(self, source: T) -> List[BaseTarget]:
+        """Async version of process.
+
+        Args:
+            source: The input source to process
+
+        Returns:
+            List of processed targets
+        """
         pass
+
+    def process(self, source: T) -> List[BaseTarget]:
+        """Synchronous process operation.
+
+        This provides a sync interface to the async a_process method.
+        Do not override this method - implement a_process instead.
+
+        Args:
+            source: The input source to process
+
+        Returns:
+            List of processed targets
+        """
+        return self._sync(self.a_process(source))

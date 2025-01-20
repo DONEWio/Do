@@ -27,7 +27,7 @@ async def See(
             raise NotImplementedError("PDF processing not implemented")
         elif paths.startswith("http"):
             web_processor = WebProcessor(config["headless"])
-            result = await web_processor.process(paths)
+            result = await web_processor.a_process(paths)
             return result[0]
         raise NotImplementedError("File type not implemented")
 
@@ -39,7 +39,7 @@ async def See(
                 raise NotImplementedError("PDF processing not implemented")
             elif path.startswith("http"):
                 web_processor = WebProcessor(config["headless"])
-                web_result = await web_processor.process(path)
+                web_result = await web_processor.a_process(path)
                 results.extend(web_result)
             else:
                 raise NotImplementedError("File type not implemented")
