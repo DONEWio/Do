@@ -8,7 +8,7 @@ from typing import cast, TypedDict, Dict, Any
 @pytest.mark.asyncio
 async def test_web_processing(httpbin_url, httpbin_available):
     """Test web processing through DO.See interface"""
-    result = await DO.Browse(f"{httpbin_url}/")
+    result = DO.Browse(f"{httpbin_url}/")
     assert result is not None
     assert result._current_page().is_live()
 

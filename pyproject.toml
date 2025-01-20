@@ -28,6 +28,9 @@ dependencies = [
   "typing-extensions>=4.12.2",
   "tabulate>=0.9.0",
   "icecream>=2.1.4",
+  "smolagents[litellm,mcp]>=1.4.1",
+  "mcp[cli]>=1.2.0",
+  "greenlet>=3.1.1",
 ]
 description = "A Python package for web processing and vision tasks with browser automation capabilities"
 keywords = [
@@ -74,14 +77,14 @@ where = ["src"]
 
 [tool.black]
 line-length = 88
-target-version = ["py38"]
+target-version = ["py311"]
 
 [tool.isort]
 multi_line_output = 3
 profile = "black"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -94,4 +97,4 @@ testpaths = ["tests"]
 ignore = []
 line-length = 88
 select = ["E", "F", "B", "I"]
-target-version = "py38"
+target-version = "py311"
