@@ -29,12 +29,11 @@ async def test_async_methods():
     config = {"model": MockModel()}
 
     # Use the async methods directly
-    browsers = await DO._browse_async(["http://example.com"])
+    browsers = await DO.A_browse(["http://example.com"])
     assert browsers is not None
-    for browser in browsers:
-        await browser.close()
+    await browsers[0].close()
 
-    doer = await DO._new_async(config)
+    doer = await DO.A_new(config)
     assert isinstance(doer, SuperDoer)
 
 

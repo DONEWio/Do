@@ -53,7 +53,7 @@ class DO:
         if asyncio.events._get_running_loop() is not None:
             raise RuntimeError(
                 """It looks like you are using DO's sync API inside an async context.
-Please use the async methods (_browse_async, _new_async) instead."""
+Please use the async methods (A_browse, A_new) instead."""
             )
 
         loop = asyncio.new_event_loop()
@@ -65,7 +65,7 @@ Please use the async methods (_browse_async, _new_async) instead."""
             asyncio.set_event_loop(None)
 
     @staticmethod
-    async def _browse_async(
+    async def A_browse(
         paths, config: Optional[dict] = None
     ) -> Union[WebBrowser, Sequence[WebBrowser]]:
         """Async version of Browse"""
@@ -87,10 +87,10 @@ Please use the async methods (_browse_async, _new_async) instead."""
         Returns:
             WebBrowser instance or sequence of WebBrowser instances
         """
-        return DO._sync(DO._browse_async(paths, config))
+        return DO._sync(DO.A_browse(paths, config))
 
     @staticmethod
-    async def _new_async(config: dict[str, Any]) -> SuperDoer:
+    async def A_new(config: dict[str, Any]) -> SuperDoer:
         """Async version of New"""
         model = config["model"]
         runtime = Runtime(**config["runtime"]) if "runtime" in config else None
@@ -111,4 +111,4 @@ Please use the async methods (_browse_async, _new_async) instead."""
         Returns:
             SuperDoer instance
         """
-        return DO._sync(DO._new_async(config))
+        return DO._sync(DO.A_new(config))

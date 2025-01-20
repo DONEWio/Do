@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import pytest
 from typing import Any
 from donew import DO
@@ -25,17 +26,17 @@ class MockProvision:
         self.cleanup_called = True
 
 
-@pytest.mark.asyncio
-async def test_new_returns_superdoer():
+def test_new_returns_superdoer():
     config = {"model": MockModel()}
-    doer = await DO.New(config)
+    doer = DO.New(config)
     assert isinstance(doer, SuperDoer)
     assert isinstance(doer, BaseDoer)
 
 
 @pytest.mark.asyncio
 async def test_method_chaining():
-    doer = await DO.New({"model": MockModel()})
+    load_dotenv()
+    doer = await DO.A_new({"model": MockModel()})
     ctx = MockProvision("test")
     prompt = "test task"
 
@@ -44,7 +45,7 @@ async def test_method_chaining():
 
     # Method chaining
 
-    doer = await DO.New({"model": MockModel()})
+    doer = await DO.A_new({"model": MockModel()})
     result = await doer.realm([ctx]).envision({"verify": verify_output}).enact(prompt)
     assert "Processed: test task" in result
 
@@ -110,10 +111,10 @@ def fibonacci(n: int) -> int:
 
 @pytest.mark.asyncio
 async def test_code_agent():
-    os.environ["DEEPSEEK_API_KEY"] = "sk-2e07cebfeb8045b79d4e8fc1c8f5f3cd"
+    load_dotenv()
 
     model = LiteLLMModel(model_id="deepseek/deepseek-chat")
-    doer = await DO.New({"model": model})
-    browser = await DO.Browse(["https://www.unrealists.com"])
+    doer = await DO.A_new({"model": model})
+    browser = await DO.A_browse(["https://www.unrealists.com"])
     result = await doer.enact("calculate fibonacci of 10")
     assert fibonacci(10) == int(result)
