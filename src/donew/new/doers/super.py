@@ -20,6 +20,7 @@ class SuperDoer(BaseDoer):
 
     def enact(self, task: str, params: Optional[dict[str, Any]] = None) -> Any:
         """Execute a task with validation and context management"""
+
         try:
             # Setup contexts in sequence
             for ctx in self._provisions:
@@ -31,7 +32,7 @@ class SuperDoer(BaseDoer):
             agent = CodeAgent(tools=[], model=self.model, add_base_tools=False)
             result = agent.run(formatted_task)
 
-            # Validate result if constraints exist 
+            # Validate result if constraints exist
             if self._constraints and "verify" in self._constraints:
                 validation = self._constraints["verify"](result)
                 if isinstance(validation, str):

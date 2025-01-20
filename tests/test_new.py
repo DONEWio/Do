@@ -1,3 +1,4 @@
+import json
 import os
 from dotenv import load_dotenv
 import pytest
@@ -7,6 +8,16 @@ from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
 from smolagents import LiteLLMModel
 from smolagents.models import ChatMessage, MessageRole
+from smolagents import CodeAgent
+from donew.utils import enable_tracing, disable_tracing
+
+
+@pytest.fixture(autouse=True, scope="module")
+def setup_tracing():
+    """Automatically enable tracing for all tests in this module."""
+    enable_tracing()
+    yield  # This will run the tests
+    disable_tracing()  # This will run after all tests are done
 
 
 class MockModel:
@@ -155,19 +166,23 @@ def test_code_agent():
     assert fibonacci(125) == int(result)
     return result
 
+
 def test_json_fit():
     load_dotenv()
     model = LiteLLMModel(model_id="deepseek/deepseek-chat")
     doer = DO.New({"model": model})
     format_json = dict(
-        name = "<string>",
-        age = "<int>",
-        gender = "<string>",
-        occupation = "<string>",
-        interests = "<list[string]>",
+        name="<string>",
+        age="<int>",
+        gender="<string>",
+        occupation="<string>",
+        interests="<list[string]>",
     )
     import json
-    result = doer.enact(f"generate a fake persona with the following json format: {json.dumps(format_json)}")
+
+    result = doer.enact(
+        f"generate a fake persona with the following json format: {json.dumps(format_json)}"
+    )
     assert isinstance(result, dict)
     assert len(result) == len(format_json)
     assert all(key in result for key in format_json)
