@@ -44,6 +44,8 @@ import transformers
 import networkx as nx
 import kuzu
 
+from donew.utils import spacy_model_with_opinionated_default
+
 TR_ALPHA: float = 0.85
 TR_LOOKBACK: int = 3
 
@@ -105,7 +107,6 @@ STOP_WORDS: Set[str] = set(
     ]
 )
 
-
 @dataclass(order=False, frozen=False)
 class TextChunk:
     id: uuid.UUID  # Which text chunk
@@ -134,7 +135,7 @@ class KnowledgeGraph:
     # Constants and configuration
     CHUNK_SIZE: int = 384
     GLINER_MODEL: str = "urchade/gliner_multi-v2.1"  # Multi-language model
-    SPACY_MODEL: str = "en_core_web_md"  # Large web model
+    SPACY_MODEL: str = spacy_model_with_opinionated_default()  # Large web model
 
     # Entity labels we want to extract
 

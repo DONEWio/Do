@@ -154,3 +154,21 @@ def test_code_agent():
     result = doer.enact("calculate fibonacci of 125")
     assert fibonacci(125) == int(result)
     return result
+
+def test_json_fit():
+    load_dotenv()
+    model = LiteLLMModel(model_id="deepseek/deepseek-chat")
+    doer = DO.New({"model": model})
+    format_json = dict(
+        name = "<string>",
+        age = "<int>",
+        gender = "<string>",
+        occupation = "<string>",
+        interests = "<list[string]>",
+    )
+    import json
+    result = doer.enact(f"generate a fake persona with the following json format: {json.dumps(format_json)}")
+    assert isinstance(result, dict)
+    assert len(result) == len(format_json)
+    assert all(key in result for key in format_json)
+    return result

@@ -28,12 +28,10 @@ class SuperDoer(BaseDoer):
             # Format task with params if provided
             formatted_task = task.format(**params) if params else task
 
-            agent = CodeAgent(tools=[], model=self.model, add_base_tools=True)
-
-            # Execute task using model from either direct model or agent
+            agent = CodeAgent(tools=[], model=self.model, add_base_tools=False)
             result = agent.run(formatted_task)
 
-            # Validate result if constraints exist
+            # Validate result if constraints exist 
             if self._constraints and "verify" in self._constraints:
                 validation = self._constraints["verify"](result)
                 if isinstance(validation, str):

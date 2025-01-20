@@ -3,7 +3,6 @@
 import asyncio
 from typing import Any, Optional
 
-
 def run_sync(coro: Any, error_message: Optional[str] = None) -> Any:
     """Run an async operation synchronously.
 
@@ -42,3 +41,12 @@ def run_sync(coro: Any, error_message: Optional[str] = None) -> Any:
         if should_close:
             loop.close()
             asyncio.set_event_loop(None)
+
+
+def spacy_model_with_opinionated_default() -> str:
+    import spacy
+    models = ['en_core_web_md','en_core_web_sm','en_core_web_lg'] + spacy.util.get_installed_models()
+    for model in models:
+        if spacy.util.is_package(model):
+            return model
+    raise ValueError("No installed spaCy model found")
