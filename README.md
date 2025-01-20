@@ -166,7 +166,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 3. Create and activate virtual environment:
 ```bash
-uv venv -p python3.11 .venv
+uv venv -p python3.11
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
@@ -180,6 +180,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    - For Knowledge Graph functionality:
    ```bash
    uv pip install pip
+   uv pip install -e "."
    uv pip install -e ".[kg,dev]"
    uv run -- spacy download en_core_web_md
    #uv run -- spacy download en_core_web_lg # Large web model

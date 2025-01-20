@@ -31,7 +31,7 @@ async def test_async_methods():
     # Use the async methods directly
     browsers = await DO.A_browse(["http://example.com"])
     assert browsers is not None
-    await browsers[0].close()
+    await browsers[0].a_close()
 
     doer = await DO.A_new(config)
     assert isinstance(doer, SuperDoer)
@@ -42,7 +42,7 @@ def test_sync_in_async_error():
     with pytest.raises(RuntimeError, match=".*using DO's sync API inside.*"):
 
         async def run():
-            return DO.Browse("http://example.com")
+            return DO.A_browse("http://example.com")
 
         asyncio.run(run())
 

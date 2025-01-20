@@ -134,7 +134,7 @@ class KnowledgeGraph:
     # Constants and configuration
     CHUNK_SIZE: int = 2048
     GLINER_MODEL: str = "urchade/gliner_multi-v2.1"  # Multi-language model
-    SPACY_MODEL: str = "en_core_web_lg"  # Large web model
+    SPACY_MODEL: str = "en_core_web_md"  # Large web model
 
     # Entity labels we want to extract
 
@@ -175,8 +175,11 @@ class KnowledgeGraph:
         transformers.logging.set_verbosity_error()
         os.environ["TOKENIZERS_PARALLELISM"] = "0"
 
-        # Load spaCy model
-        nlp = spacy.load(self._spacy_model)
+        try:
+            # Load spaCy model
+            nlp = spacy.load(self._spacy_model)
+        except Exception as e:
+            raise ValueError(f"Could not load spaCy model '{self._spacy_model}'") from e
 
         # Add GLiNER
         nlp.add_pipe(

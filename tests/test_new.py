@@ -132,10 +132,18 @@ def test_realm_and_envision_chain():
     assert "Processed:" in result
 
 
-def fibonacci(n: int) -> int:
-    if n <= 1:
-        return n
-    return fibonacci(n - 1) + fibonacci(n - 2)
+def fibonacci(n):
+    if n < 0:
+        return "Input should be a non-negative integer."
+    elif n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    else:
+        a, b = 0, 1
+        for _ in range(2, n + 1):
+            a, b = b, a + b
+        return b
 
 
 def test_code_agent():
@@ -143,6 +151,6 @@ def test_code_agent():
 
     model = LiteLLMModel(model_id="deepseek/deepseek-chat")
     doer = DO.New({"model": model})
-    browser = DO.A_browse(["https://www.unrealists.com"])
-    result = doer.enact("calculate fibonacci of 10")
-    assert fibonacci(10) == int(result)
+    result = doer.enact("calculate fibonacci of 125")
+    assert fibonacci(125) == int(result)
+    return result
