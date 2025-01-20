@@ -31,6 +31,7 @@ dependencies = [
   "smolagents[litellm,mcp]>=1.4.1",
   "mcp[cli]>=1.2.0",
   "greenlet>=3.1.1",
+  "tqdm>=4.67.1",
 ]
 description = "A Python package for web processing and vision tasks with browser automation capabilities"
 keywords = [

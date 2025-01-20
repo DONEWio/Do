@@ -189,7 +189,8 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 5. Install Playwright browsers:
 ```bash
-donew-install-browsers
+playwright install chromium
+playwright install # or all browsers
 ```
 
 
@@ -200,7 +201,7 @@ Run the test suite:
 pytest tests/
 ```
 
-For more detailed testing options, including using local or remote httpbin, see the [Testing Documentation](docs/testing.md).
+For more detailed testing options, including using local or remote httpbin, see the [Testing Documentation](docs/testing.md). (#TODO)
 
 ## Contributing
 
