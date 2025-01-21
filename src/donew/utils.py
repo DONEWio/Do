@@ -2,6 +2,7 @@
 
 import asyncio
 from typing import Any, Optional
+from pydantic import BaseModel
 
 
 def run_sync(coro: Any, error_message: Optional[str] = None) -> Any:
@@ -135,3 +136,26 @@ def disable_tracing():
         delattr(enable_tracing, "_tracing_enabled")
 
     print("✅ Tracing disabled")
+
+
+def pydantic_model_to_simple_schema(model_or_schema: BaseModel | dict[str, Any]) -> dict:
+    def transform_type(property_info: dict) -> str:
+        description = property_info.get("description", "")
+        if property_info.get("$ref"):
+            ref_name = property_info.get("$ref").split("/")[-1]
+            return pydantic_model_to_simple_schema(schema.get("$defs", {}).get(ref_name, {}))
+        if property_info.get("type") == "array":
+            item_type = property_info["items"]["type"]
+            return f"<array[{item_type}]>{' '+description if description else ''}"
+        return f"<{property_info.get('type','string')}>{'' if not description else ' '+description}"
+    try:
+        schema = model_or_schema if isinstance(model_or_schema, dict) else model_or_schema.model_json_schema()
+        properties = schema["properties"]
+        result = {}
+        for prop_name, prop_info in properties.items():
+            result[prop_name] = transform_type(prop_info)
+        return result
+    except KeyError as e:
+        raise ValueError(f"Invalid schema structure: missing {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Error processing schema: {str(e)}")
