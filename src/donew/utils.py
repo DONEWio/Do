@@ -138,19 +138,36 @@ def disable_tracing():
     print("✅ Tracing disabled")
 
 
-def pydantic_model_to_simple_schema(model_or_schema: BaseModel | dict[str, Any]) -> dict:
+def pydantic_model_to_simple_schema(
+        model_or_schema: BaseModel | dict[str, Any],
+        _processed_refs: set[str] = {}, # Circular Reference Protection
+    ) -> dict:
+    """
+    This transforms a pydantic model or json schema into
+    a simple schema that is easier understood by even smaller LLMs
+    TODO: Handle Union types with sub-schemas?
+    """
     def transform_property(prop_name: str, prop_info: dict) -> str:
+        if "anyOf" in prop_info or "oneOf" in prop_info:
+            types = [t.get("type", "string") for t in (prop_info.get("anyOf") or prop_info.get("oneOf")) if t.get("type")]
+            prop_info["type"] = '|'.join(types)
         if prop_info.get("$ref"):
             ref_name = prop_info.get("$ref").split("/")[-1]
-            return pydantic_model_to_simple_schema(schema.get("$defs", {}).get(ref_name, {}))
+            if not ref_name in _processed_refs:
+                _processed_refs[ref_name] = pydantic_model_to_simple_schema(schema.get("$defs", {}).get(ref_name, {}))
+            return _processed_refs[ref_name]
         if prop_info.get("type") == "array" and prop_info.get("items",{}).get("$ref"):
             ref_name = prop_info.get("items",{}).get("$ref").split("/")[-1]
+            if not ref_name in _processed_refs:
+                _processed_refs[ref_name] = pydantic_model_to_simple_schema(schema.get("$defs", {}).get(ref_name, {}))
             return [pydantic_model_to_simple_schema(schema.get("$defs", {}).get(ref_name, {}))]
         description = prop_info.get("description", prop_info.get("title", prop_name))
         item_type = f"array[{prop_info.get('items',{}).get('type', 'string')}]" if prop_info.get("type") == "array" else prop_info.get("type", "string")
+        choices = f"[CHOICES: {'|'.join([str(choice) for choice in prop_info.get('enum',[])])}]" if "enum" in prop_info else ''
         required = "[REQUIRED]" if prop_info.get("required", False) else ''
         default = f"[DEFAULT: {prop_info.get('default', '')}]" if "default" in prop_info else ''
-        return f"<{item_type}>{' '+description if description else ''}{' '+required if required else ''}{' '+default if default else ''}"
+        
+        return f"<{item_type}>{' '+description if description else ''}{' '+choices if choices else ''}{' '+required if required else ''}{' '+default if default else ''}"
     try:
         schema = model_or_schema if isinstance(model_or_schema, dict) else model_or_schema.model_json_schema()
         properties = schema["properties"]
@@ -158,7 +175,5 @@ def pydantic_model_to_simple_schema(model_or_schema: BaseModel | dict[str, Any])
         for prop_name, prop_info in properties.items():
             result[prop_name] = transform_property(prop_name, prop_info)
         return result
-    except KeyError as e:
-        raise ValueError(f"Invalid schema structure: missing {str(e)}")
     except Exception as e:
         raise ValueError(f"Error processing schema: {str(e)}")
