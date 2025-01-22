@@ -1,5 +1,3 @@
-import json
-import os
 from dotenv import load_dotenv
 import pytest
 from typing import Any, Optional
@@ -178,7 +176,7 @@ def test_json_fit():
         age="<int>",
         gender="<string>",
         occupation="<string>",
-        interests="<list[string]>",
+        interests="<array[string]>",
     )
     result = doer.enact(
         f"generate a fake persona with the following json format: {json.dumps(format_json)}"
@@ -187,7 +185,6 @@ def test_json_fit():
     assert len(result) == len(format_json)
     assert all(key in result for key in format_json)
     return result
-
 
 
 def test_json_fit_from_pydantic():

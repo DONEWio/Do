@@ -139,21 +139,24 @@ def disable_tracing():
 
 
 def pydantic_model_to_simple_schema(model_or_schema: BaseModel | dict[str, Any]) -> dict:
-    def transform_type(property_info: dict) -> str:
-        description = property_info.get("description", "")
-        if property_info.get("$ref"):
-            ref_name = property_info.get("$ref").split("/")[-1]
+    def transform_property(prop_name: str, prop_info: dict) -> str:
+        if prop_info.get("$ref"):
+            ref_name = prop_info.get("$ref").split("/")[-1]
             return pydantic_model_to_simple_schema(schema.get("$defs", {}).get(ref_name, {}))
-        if property_info.get("type") == "array":
-            item_type = property_info["items"]["type"]
-            return f"<array[{item_type}]>{' '+description if description else ''}"
-        return f"<{property_info.get('type','string')}>{'' if not description else ' '+description}"
+        if prop_info.get("type") == "array" and prop_info.get("items",{}).get("$ref"):
+            ref_name = prop_info.get("items",{}).get("$ref").split("/")[-1]
+            return [pydantic_model_to_simple_schema(schema.get("$defs", {}).get(ref_name, {}))]
+        description = prop_info.get("description", prop_info.get("title", prop_name))
+        item_type = f"array[{prop_info.get('items',{}).get('type', 'string')}]" if prop_info.get("type") == "array" else prop_info.get("type", "string")
+        required = "[REQUIRED]" if prop_info.get("required", False) else ''
+        default = f"[DEFAULT: {prop_info.get('default', '')}]" if "default" in prop_info else ''
+        return f"<{item_type}>{' '+description if description else ''}{' '+required if required else ''}{' '+default if default else ''}"
     try:
         schema = model_or_schema if isinstance(model_or_schema, dict) else model_or_schema.model_json_schema()
         properties = schema["properties"]
         result = {}
         for prop_name, prop_info in properties.items():
-            result[prop_name] = transform_type(prop_info)
+            result[prop_name] = transform_property(prop_name, prop_info)
         return result
     except KeyError as e:
         raise ValueError(f"Invalid schema structure: missing {str(e)}")
