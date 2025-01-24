@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, TypeVar
+from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 from dataclasses import dataclass, field
 
 from donew.new.types import Provision, Model
@@ -8,7 +8,6 @@ from smolagents import TransformersModel, HfApiModel, LiteLLMModel
 
 
 T = TypeVar("T", bound="BaseDoer")
-
 
 @dataclass(frozen=True)
 class BaseDoer(ABC):
@@ -19,6 +18,7 @@ class BaseDoer(ABC):
     _runtime: Optional[Runtime] = None
     _constraints: Optional[dict] = None
     _provisions: List[Provision] = field(default_factory=list)
+    _verify: Optional[Callable[[Any], Any]] = None
 
     @property
     def model(self) -> Model:
@@ -30,7 +30,7 @@ class BaseDoer(ABC):
         raise ValueError("No model available - provide either model or agent")
 
     @abstractmethod
-    def envision(self: T, constraints: dict[str, Any]) -> T:
+    def envision(self: T, constraints: dict[str, Any], verify: Optional[Callable[[Any], None]] = None) -> T:
         """Set constraints and return new instance"""
         pass
 

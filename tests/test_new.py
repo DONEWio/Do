@@ -165,36 +165,12 @@ def test_code_agent():
     return result
 
 
-def test_json_fit():
-    load_dotenv()
-    model = LiteLLMModel(model_id="deepseek/deepseek-chat")
-    # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
-    doer = DO.New({"model": model})
-    import json
-    format_json = dict(
-        name="<string>",
-        age="<int>",
-        gender="<string>",
-        occupation="<string>",
-        interests="<array[string]>",
-    )
-    result = doer.enact(
-        f"generate a fake persona with the following json format: {json.dumps(format_json)}"
-    )
-    assert isinstance(result, dict)
-    assert len(result) == len(format_json)
-    assert all(key in result for key in format_json)
-    return result
-
-
 def test_json_fit_from_pydantic():
     load_dotenv()
     model = LiteLLMModel(model_id="deepseek/deepseek-chat")
     # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
     doer = DO.New({"model": model})
     from pydantic import BaseModel, Field
-    import json
-    from donew.utils import pydantic_model_to_simple_schema
 
     class Occupation(BaseModel):
         name: str = Field(description="The name of the occupation")
@@ -207,14 +183,24 @@ def test_json_fit_from_pydantic():
         occupation: Occupation
         interests: list[str] = Field(description="The interests of the person")
     
-    format_json = pydantic_model_to_simple_schema(Persona)
-    result = doer.enact(
-        f"generate a fake persona with the following json format: {json.dumps(format_json)}"
-    )
-    assert isinstance(result, dict)
-    assert len(result) == len(format_json)
-    assert all(key in result for key in format_json)
-    return result
+    result = doer.envision(Persona).enact("generate a fake persona")
+    assert isinstance(result, Persona)
+
+
+def test_json_fit_from_pydantic_with_custom_verify():
+    load_dotenv()
+    model = LiteLLMModel(model_id="deepseek/deepseek-chat")
+    # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
+    doer = DO.New({"model": model})
+    from pydantic import BaseModel, Field
+    class Persona(BaseModel):
+        name: str = Field(description="The name of the person")
+        age: int = Field(description="The age of the person")
+        gender: str = Field(description="The gender of the person")
+
+    result = doer.envision(Persona, verify=lambda x: str(x)).enact("generate a fake persona")
+    assert isinstance(result, str)
+    
 
 def test_code_executor():
     """this test is just for playing around with the code executor"""
