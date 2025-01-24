@@ -187,6 +187,34 @@ def test_json_fit_from_pydantic():
     assert isinstance(result, Persona)
 
 
+def test_envision_without_schema():
+    load_dotenv()
+    model = LiteLLMModel(model_id="deepseek/deepseek-chat")
+    # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
+    doer = DO.New({"model": model})
+    result = doer.envision("name(<name>), age(<age>), gender(<gender>)").enact("generate a fake persona")
+    assert isinstance(result, str)
+
+def test_envision_without_schema_with_custom_verify():
+    load_dotenv()
+    model = LiteLLMModel(model_id="deepseek/deepseek-chat")
+    # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
+    doer = DO.New({"model": model})
+    def custom_verify(x):
+        if not isinstance(x, str):
+            raise ValueError("Expected a string")
+        if not x.startswith("name(") or not x.endswith(")"):
+            raise ValueError("Expected a string starting with 'name(' and ending with ')")
+        if not 'name(' in x or not 'age(' in x or not 'gender(' in x:
+            raise ValueError("Expected a string containing 'name(', 'age(', and 'gender('")
+        return x
+
+    result = doer.envision(
+        "name(<name>), age(<age>), gender(<gender>)",
+        verify=custom_verify
+    ).enact("generate a fake persona")
+    assert isinstance(result, str)
+
 def test_json_fit_from_pydantic_with_custom_verify():
     load_dotenv()
     model = LiteLLMModel(model_id="deepseek/deepseek-chat")

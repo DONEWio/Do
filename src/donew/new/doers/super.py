@@ -1,11 +1,11 @@
 import json
-from typing import Any, Awaitable, Callable, List, Optional, Union
+from typing import Any, Callable, List, Optional
 from dataclasses import dataclass, replace
-
+from pydantic import BaseModel
 from donew.new.doers import BaseDoer
 from donew.new.types import Provision
 from smolagents import CodeAgent
-from donew.utils import parse_to_pydantic, pydantic_model_to_simple_schema
+from donew.utils import is_pydantic_model, parse_to_pydantic, pydantic_model_to_simple_schema
 
 
 @dataclass(frozen=True)
@@ -29,8 +29,11 @@ class SuperDoer(BaseDoer):
                 ctx.setup()
 
             if self._constraints:
-                constraints_schema = pydantic_model_to_simple_schema(self._constraints)
-                task = task + f"\nYou must answer in the following JSON format:\n---\n{json.dumps(constraints_schema)}"
+                if is_pydantic_model(self._constraints):
+                    constraints_schema = pydantic_model_to_simple_schema(self._constraints)
+                    task = task + f"\nYou must answer in the following JSON format:\n---\n{json.dumps(constraints_schema)}"
+                else:
+                    task = task + f"\nYou must answer in the following format:\n---\n{self._constraints}"
 
             formatted_task = task.format(**params) if params else task
             
@@ -39,7 +42,7 @@ class SuperDoer(BaseDoer):
 
             if self._verify:
                 result = self._verify(result)
-            elif self._constraints:
+            elif self._constraints and is_pydantic_model(self._constraints):
                 result = parse_to_pydantic(result, self._constraints)
                 
             return result

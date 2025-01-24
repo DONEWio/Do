@@ -137,9 +137,11 @@ def disable_tracing():
 
     print("✅ Tracing disabled")
 
+def is_pydantic_model(schema):
+    return isinstance(schema, BaseModel) or (isinstance(schema, type) and issubclass(schema, BaseModel))
 
 def parse_to_pydantic(data, schema):
-    if isinstance(schema, BaseModel) or (isinstance(schema, type) and issubclass(schema, BaseModel)):
+    if is_pydantic_model(schema):
         return schema.model_validate(data)
     return data
 
