@@ -8,6 +8,14 @@ from typing import cast, TypedDict, Dict, Any
 from donew.utils import run_sync
 
 
+def test_web_processing_docs():
+    """Test web processing through DO.See interface"""
+    docs = DO.Documentation("browse")
+    assert docs is not None
+    assert len(docs) > 0
+    print(docs)
+
+
 def test_web_processing(httpbin_url, httpbin_available):
     """Test web processing through DO.See interface"""
     result = DO.Browse(f"{httpbin_url}/")

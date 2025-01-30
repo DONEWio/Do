@@ -1,0 +1,246 @@
+---
+description: project spec
+globs: *.py
+---
+# DoNew Core PRD
+
+## Overview
+DoNew is a Python package designed to enable AI agents to interact with web content and documents through high-level, intuitive interfaces. The project aims to bridge the gap between AI capabilities and real-world applications by providing robust tools for web automation, document processing, and autonomous task execution.
+
+## Goals
+1. Provide AI-first interfaces for web and document interaction
+2. Enable autonomous decision-making and task execution
+3. Maintain high reliability and performance
+4. Ensure excellent developer experience
+5. Support both simple and complex AI agent workflows
+
+## Core Components
+
+### 1. DO.Browse
+#### Current Status: Released (v0.1.4)
+#### Purpose
+Enables AI agents to navigate and interact with web content autonomously.
+
+#### Key Features
+- Autonomous webpage navigation
+- Smart element detection and interaction
+- State management (cookies, storage)
+- Visual debugging tools
+- Context-aware operations
+
+#### Technical Requirements
+- Playwright integration for browser automation
+- Async/await support
+- Type safety
+- Error handling and recovery
+- Performance optimization
+
+### 2. DO.Graph (New)
+#### Status: Beta
+#### Purpose
+Provides knowledge graph capabilities for AI understanding and relationship mapping.
+
+#### Key Features
+- Named Entity Recognition using GLiNER
+- Relationship Extraction using GLiREL
+- Graph storage with KuzuDB
+- Text processing with spaCy
+- Persistent graph storage
+
+#### Technical Requirements
+- Python 3.11+ support
+- spaCy integration
+- KuzuDB backend
+- Memory-efficient processing
+- Async support
+
+### 3. DO.Read (Planned)
+#### Status: In Development
+#### Purpose
+Facilitate AI understanding and processing of documents.
+
+#### Key Features
+- PDF processing
+- Document structure analysis
+- Content extraction
+- Cross-document referencing
+- Semantic understanding
+
+#### Technical Requirements
+- PDF parsing capabilities
+- OCR integration
+- Structure recognition
+- Content indexing
+- Memory-efficient processing
+
+### 4. DO(...).New (Planned)
+#### Status: Design Phase
+#### Purpose
+Enable complex task execution and decision-making.
+
+#### Key Features
+- Task planning
+- Decision trees
+- Multi-step operations
+- Context awareness
+- State persistence
+
+#### Technical Requirements
+- Task orchestration
+- State management
+- Error recovery
+- Progress tracking
+- Performance monitoring
+
+## Technical Architecture
+
+### Core Architecture
+- Python 3.8+ support
+- Async-first design
+- Type hints throughout
+- Modular component design
+- Extensive error handling
+
+### Dependencies
+- Playwright for web automation
+- Additional dependencies per component (PDF, OCR, etc.)
+- Minimal core dependencies
+
+### Performance Requirements
+- Sub-second response times for basic operations
+- Efficient memory usage
+- Scalable for large documents/complex tasks
+- Graceful degradation under load
+
+## API Design
+
+### Principles
+1. Intuitive interfaces
+2. Consistent patterns
+3. Comprehensive type hints
+4. Detailed documentation
+5. Predictable behavior
+
+### Interface Examples
+```python
+# Browse Interface
+browser = await DO.Browse(url)
+elements = browser.elements()
+await browser.type(element_id, text)
+
+# Future Read Interface
+document = await DO.Read(file_path)
+content = document.extract()
+structure = document.analyze()
+
+# Future New Interface
+task = DO(context).New(task_definition)
+await task.execute()
+```
+
+## Success Metrics
+
+### Technical Metrics
+- Test coverage > 90%
+- Response time < 1s for basic operations
+- Memory usage < 500MB for standard operations
+- Error rate < 1%
+
+### User Metrics
+- Developer satisfaction
+- API usability
+- Documentation completeness
+- Community engagement
+
+## Release Strategy
+
+### Version 0.x
+- Core Browse functionality
+- Basic web automation
+- Essential tools for AI agents
+
+### Version 1.0
+- Complete Browse implementation
+- Initial Read functionality
+- Stable API
+
+### Version 2.0
+- Full Read implementation
+- Initial New functionality
+- Enhanced AI capabilities
+
+## Documentation Requirements
+
+### Types
+1. API Reference
+2. Tutorials
+3. Examples
+4. Best Practices
+5. Troubleshooting
+
+### Formats
+- Online documentation (nextra-based)
+- Inline code documentation
+- Jupyter notebooks
+- Video tutorials (planned)
+
+## Testing Requirements
+
+### Unit Tests
+- Component-level testing
+- Edge case coverage
+- Performance testing
+- Type checking
+
+### Integration Tests
+- Cross-component testing
+- Real-world scenarios
+- Browser compatibility
+- Network conditions
+
+### User Testing
+- Developer feedback
+- AI agent integration
+- Use case validation
+- Performance monitoring
+
+## Security Considerations
+
+### Browser Security
+- Sandboxed execution
+- Resource limitations
+- Access controls
+- Data privacy
+
+### Document Security
+- Safe file handling
+- Content validation
+- Access permissions
+- Data encryption
+
+### Task Security
+- Execution limits
+- Resource controls
+- Error containment
+- Audit logging
+
+## Future Considerations
+
+### Scalability
+- Cloud deployment
+- Distributed processing
+- Load balancing
+- Resource optimization
+
+### AI Integration
+- LLM optimization
+- Vision model support
+- Multi-modal processing
+- Context enhancement
+
+### Community
+- Plugin system
+- Extension API
+- Community contributions
+- Use case sharing
+``` 

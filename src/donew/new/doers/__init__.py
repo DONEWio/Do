@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 from dataclasses import dataclass, field
 
-from donew.new.types import Provision, Model
+from donew.new.types import Provision, Model, BROWSE, SEE, NEW
 from donew.new.runtime import Runtime
 from smolagents import TransformersModel, HfApiModel, LiteLLMModel
 
@@ -35,7 +35,7 @@ class BaseDoer(ABC):
         pass
 
     @abstractmethod
-    def realm(self: T, provisions: List[Provision]) -> T:
+    def realm(self: T, provisions: List[type[Provision]]) -> T:
         """Set provisions and return new instance"""
         pass
 

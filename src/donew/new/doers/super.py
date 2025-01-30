@@ -3,9 +3,10 @@ from typing import Any, Callable, List, Optional
 from dataclasses import dataclass, replace
 from pydantic import BaseModel
 from donew.new.doers import BaseDoer
-from donew.new.types import Provision
 from smolagents import CodeAgent
+from donew.new.types import BROWSE, ProvisionType
 from donew.utils import is_pydantic_model, parse_to_pydantic, pydantic_model_to_simple_schema
+from donew.new.agents.browse import BrowseTool
 
 
 @dataclass(frozen=True)
@@ -17,7 +18,7 @@ class SuperDoer(BaseDoer):
         return replace(self, _constraints=constraints, _verify=verify)
 
 
-    def realm(self, provisions: List[Provision]) -> "SuperDoer":
+    def realm(self, provisions: List[ProvisionType]) -> "SuperDoer":
         """Return new instance with provisions"""
         return replace(self, _provisions=provisions)
 
@@ -25,8 +26,13 @@ class SuperDoer(BaseDoer):
     def enact(self, task: str, params: Optional[dict[str, Any]] = None) -> Any:
         """Execute a task with validation and context management"""
         try:
-            for ctx in self._provisions:
-                ctx.setup()
+            tools = []
+            for provision in self._provisions:
+                if provision == BROWSE:
+                    tools.append(BrowseTool(model=self.model))
+                
+
+            
 
             if self._constraints:
                 if is_pydantic_model(self._constraints):
@@ -37,7 +43,7 @@ class SuperDoer(BaseDoer):
 
             formatted_task = task.format(**params) if params else task
             
-            agent = CodeAgent(tools=[], model=self.model, add_base_tools=False)
+            agent = CodeAgent(tools=tools, model=self.model, add_base_tools=False)
             result = agent.run(formatted_task)
 
             if self._verify:
@@ -47,6 +53,5 @@ class SuperDoer(BaseDoer):
                 
             return result
 
-        finally:
-            for ctx in reversed(self._provisions):
-                ctx.cleanup()
+        except Exception as e:
+            return str(e)

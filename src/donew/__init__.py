@@ -7,15 +7,16 @@ Description of your package.
 
 __version__ = "0.1.5"  # Remember to update this when bumping version in pyproject.toml
 
-from typing import Optional, Sequence, Union, cast, overload, Any
-import asyncio
-import greenlet
+from typing import Literal, Optional, Sequence, Union, cast, Any
 from donew.see.processors import BaseTarget, KeyValueSection, TableSection
 from donew.see.processors.web import WebBrowser, WebProcessor
 from donew.see import See
 from donew.new.doers.super import SuperDoer
 from donew.new.runtime import Runtime
 from donew.utils import run_sync
+from donew.new.types import BROWSE, SEE, NEW, Provision
+
+
 
 __all__ = [
     "DO",
@@ -25,12 +26,11 @@ __all__ = [
     "WebBrowser",
     "WebProcessor",
     "See",
+    "BROWSE",  # Add these to __all__ so they're available when importing
+    "SEE",
+    "NEW",
+    "Provision",
 ]
-
-
-class MainGreenlet(greenlet.greenlet):
-    def __str__(self) -> str:
-        return "<MainGreenlet>"
 
 
 class DO:
@@ -56,6 +56,21 @@ class DO:
             """It looks like you are using DO's sync API inside an async context.
 Please use the async methods (A_browse, A_new) instead.""",
         )
+
+    @staticmethod
+    async def A_documentation(target: Literal["browse"]):
+        docs = []
+        if target == "browse":
+            browser = await See("https://documentation/request")
+            docs.extend(browser.documentation())
+        else:
+            raise ValueError(f"Invalid target: {target}")
+        docs = "\n".join(docs)
+        return docs
+
+    @staticmethod
+    def Documentation(target: Literal["browse"]):
+        return DO._sync(DO.A_documentation(target))
 
     @staticmethod
     async def A_browse(

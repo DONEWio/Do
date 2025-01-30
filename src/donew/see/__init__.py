@@ -26,9 +26,13 @@ async def See(
         if paths.endswith(".pdf"):
             raise NotImplementedError("PDF processing not implemented")
         elif paths.startswith("http"):
-            web_processor = WebProcessor(config["headless"])
-            result = await web_processor.a_process(paths)
-            return result[0]
+            # Special case for documentation
+            if paths == "https://documentation/request":
+                return WebProcessor()
+            else:
+                web_processor = WebProcessor(config["headless"])
+                result = await web_processor.a_process(paths)
+                return result[0]
         raise NotImplementedError("File type not implemented")
 
     # Handle list of paths

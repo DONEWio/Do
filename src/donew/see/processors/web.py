@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 
-from . import BaseProcessor, BaseTarget, StateDict, manual, public
+from . import BaseProcessor, BaseTarget, StateDict, documentation, public
 
 
 def get_script_path(filename: str) -> str:
@@ -69,10 +69,10 @@ class WebPage(BaseTarget):
     async def process(self, url: str) -> "WebPage":
         """Process a webpage and extract its elements.
 
-        Args:
+        **Inputs**
             url: The URL to process.
 
-        Returns:
+        **Outputs**
             WebPage: The processed WebPage instance.
         """
         if not self.is_live():
@@ -151,10 +151,10 @@ class WebPage(BaseTarget):
     ) -> Dict[int, ElementMetadata]:
         """Get all elements, optionally filtered by bounding box.
 
-        Args:
+        **Inputs**
             bbox (Tuple[float, float, float, float], optional): Bounding box filter (x1, y1, x2, y2).
 
-        Returns:
+        **Outputs**
             Dict[int, ElementMetadata]: A dictionary of element IDs to metadata.
         """
         if bbox:
@@ -185,8 +185,11 @@ class WebPage(BaseTarget):
     async def click(self, element_id: int):
         """Click an element.
 
-        Args:
+        **Inputs**
             element_id (int): The ID of the element to click.
+
+        **Outputs**
+            None
         """
         if not self._page:
             raise ValueError("No live page connection")
@@ -201,9 +204,12 @@ class WebPage(BaseTarget):
     async def type(self, element_id: int, text: str):
         """Type text into an element.
 
-        Args:
+        **Inputs**
             element_id (int): The ID of the input element.
             text (str): The text to type.
+
+        **Outputs**
+            None
         """
         if not self._page:
             raise ValueError("No live page connection")
@@ -235,12 +241,15 @@ class WebPage(BaseTarget):
         bbox: Optional[Tuple[float, float, float, float]] = None,
         viewport: Optional[bool] = None,
     ) -> bytes:
-        """Get element's image content
+        """Get element's image content in PNG format.
 
-        Args:
+        **Inputs**
             element_id: The ID of the element to get the image from. If None, gets the entire page.
             bbox: A tuple of (x1, y1, x2, y2) to crop the image to.
             viewport: Whether to get the image of the viewport or the entire page. Only applies if element_id is None.
+
+        **Outputs**
+            bytes: The image content.
         """
         if element_id:
             element = self._elements.get(element_id)
@@ -269,9 +278,9 @@ class WebPage(BaseTarget):
         element_id: Optional[int] = None,
     ) -> str:
         """Get element's text content with interactive elements marked.
-        Args:
+        **Inputs**
             element_id: The ID of the element to get the text from. If None, gets the page content.
-        Returns:
+        **Outputs**
             str: The text content with interactive elements marked with [id@type#subtype].
         """
         if not self._page:
@@ -301,7 +310,14 @@ class WebPage(BaseTarget):
             await self._page.evaluate(restore_script)
 
     async def scroll(self, element_id: int):
-        """Scroll element into view"""
+        """Scroll element into view
+
+        **Inputs**
+            element_id: The ID of the element to scroll.
+
+        **Outputs**
+            None
+        """
         if not self._page:
             raise ValueError("No live page connection")
 
@@ -320,18 +336,15 @@ class WebPage(BaseTarget):
         """Gets or sets cookies for the current browser context using Playwright's native cookie handling.
         Direct passthrough to Browser's context.cookies() and context.add_cookies() methods.
 
-        **Parameters**
+        **Inputs**
             cookies : Dict[str, str], optional
                 Cookie dictionary to set using Playwright's add_cookies.
                 If None, returns current cookies via Playwright's cookies() method.
 
-        **Returns**
+        **Outputs**
             Dict[str, str]
                 Dictionary of current cookies from Playwright's context.cookies()
 
-        **Raises**
-            ValueError
-                If no live page connection exists
 
         **Usage**
         ```python
@@ -358,7 +371,7 @@ class WebPage(BaseTarget):
     ) -> Dict[str, Any]:
         """Gets or sets storage state (localStorage and sessionStorage) for the current page.
 
-        **Parameters**
+        **Inputs**
             storage_state : Dict[str, Any], optional
                 Storage state to set. Should be in format:
                 {
@@ -367,7 +380,7 @@ class WebPage(BaseTarget):
                 }
                 If None, returns current storage state.
 
-        **Returns**
+        **Outputs**
             Dict[str, Any]
                 Dictionary containing current localStorage and sessionStorage state:
                 {
@@ -422,8 +435,11 @@ class WebPage(BaseTarget):
     async def toggle_annotation(self, enabled: bool = True) -> None:
         """Toggle visual annotation of elements on the page.
 
-        Args:
+        **Inputs**
             enabled: Whether to enable or disable annotation
+
+        **Outputs**
+            None
         """
         self._annotation_enabled = enabled
         if self._page:
@@ -458,6 +474,9 @@ class WebPage(BaseTarget):
     def interaction_history(self) -> List[Tuple[float, str, Dict[str, Any]]]:
         """Get page's interaction history as [(timestamp, action_type, metadata)]
         Metadata includes element info, data, and page URL
+
+        **Outputs**
+            List[Tuple[float, str, Dict[str, Any]]]: The interaction history.
         """
         history = []
 
@@ -480,7 +499,27 @@ class WebPage(BaseTarget):
 
         return history
 
-    async def evaluate(self, script: str) -> Any:
+    async def evaluate(self, expression: str) -> Any:
+        """Evaluate JavaScript in the current page.
+        Returns the value of the `expression` invocation.
+
+        If the function passed to the `browser.evaluate()` returns a [Promise], then `browser.evaluate()` would
+        wait for the promise to resolve and return its value.
+
+        If the function passed to the `browser.evaluate()` returns a non-[Serializable] value, then
+        `browser.evaluate()` resolves to `undefined`. Browser also supports transferring some additional values
+        that are not serializable by `JSON`: `-0`, `NaN`, `Infinity`, `-Infinity`.
+
+        **Inputs**
+            expression: The JavaScript expression to evaluate.
+
+        **Outputs**
+            Any: The value of the expression.
+
+
+
+        """
+
         return await self._page.evaluate(script)  # type: ignore
 
 
@@ -532,10 +571,7 @@ class WebBrowser(BaseTarget):
         self._pages.append(new_page)
 
     @public(order=2)
-    @manual(
-        template="Extends page annotation to browser level: {extendee}",
-        extends=WebPage.toggle_annotation,
-    )
+    @documentation(extends=WebPage.toggle_annotation)
     def toggle_annotation(self, enabled: bool = True) -> None:
         """Toggle visual annotation of elements on the current page.
 
@@ -553,11 +589,8 @@ class WebBrowser(BaseTarget):
         if self._pages:
             await self._current_page().toggle_annotation(enabled)
 
-    @public(order=2)
-    @manual(
-        template="Get/Set cookies from current page: {extendee}",
-        extends=WebPage.cookies,
-    )
+    @public(order=3)
+    @documentation(extends=WebPage.cookies)
     def cookies(
         self, cookies: Optional[Dict[str, str]] = None
     ) -> Sequence[Dict[str, str]]:
@@ -568,11 +601,8 @@ class WebBrowser(BaseTarget):
     ) -> Sequence[Dict[str, str]]:
         return await self._current_page().cookies(cookies)
 
-    @public(order=3)
-    @manual(
-        template="Get/Set storage state from current page: {extendee}",
-        extends=WebPage.storage,
-    )
+    @public(order=4)
+    @documentation(extends=WebPage.storage)
     def storage(
         self, storage_state: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Dict[str, str]]:
@@ -583,33 +613,24 @@ class WebBrowser(BaseTarget):
     ) -> Dict[str, Dict[str, str]]:
         return await self._current_page().storage(storage_state)
 
-    @public(order=4)
-    @manual(
-        template="Click an element: {extendee}",
-        extends=WebPage.click,
-    )
+    @public(order=5)
+    @documentation(extends=WebPage.click)
     def click(self, element_id: int):
         return self._sync(self.a_click(element_id))
 
     async def a_click(self, element_id: int):
         return await self._current_page().click(element_id)
 
-    @public(order=5)
-    @manual(
-        template="Type text into an element: {extendee}",
-        extends=WebPage.type,
-    )
+    @public(order=6)
+    @documentation(extends=WebPage.type)
     def type(self, element_id: int, text: str):
         return self._sync(self.a_type(element_id, text))
 
     async def a_type(self, element_id: int, text: str):
         return await self._current_page().type(element_id, text)
 
-    @public(order=5)
-    @manual(
-        template="Get image content from an element: {extendee}",
-        extends=WebPage.image,
-    )
+    @public(order=7)
+    @documentation(extends=WebPage.image)
     def image(
         self,
         element_id: Optional[int] = None,
@@ -628,11 +649,8 @@ class WebBrowser(BaseTarget):
         """Async version of image."""
         return await self._current_page().a_image(element_id, bbox, viewport)
 
-    @public(order=5)
-    @manual(
-        template="Get text content from an element: {extendee}",
-        extends=WebPage.text,
-    )
+    @public(order=8)
+    @documentation(extends=WebPage.text)
     def text(self, element_id: Optional[int] = None) -> str:
         return self._sync(self.a_text(element_id))
 
@@ -644,27 +662,8 @@ class WebBrowser(BaseTarget):
         """Get text content from an element."""
         return self._sync(self.a_text(element_id))
 
-    @public(order=6)
-    @manual(
-        template="Close the browser: {extendee}",
-        extends=WebPage.close,
-    )
-    def close(self):
-        """Close the browser and clean up resources."""
-        return self._sync(self.a_close())
-
-    async def a_close(self):
-        """Async version of close."""
-        if self._browser:
-            await self._browser.close()
-            self._browser = None
-            self._pages.clear()
-
-    @public(order=7)
-    @manual(
-        template="Get all elements on the current page: {extendee}",
-        extends=WebPage.elements,
-    )
+    @public(order=9)
+    @documentation(extends=WebPage.elements)
     def elements(
         self, bbox: Optional[Tuple[float, float, float, float]] = None
     ) -> Dict[int, ElementMetadata]:
@@ -762,8 +761,8 @@ class WebBrowser(BaseTarget):
             ]
         }
 
-    @public(order=8)
-    @manual(
+    @public(order=10)
+    @documentation(
         template="{extendee}",
         extends=WebPage.evaluate,
     )
@@ -775,12 +774,30 @@ class WebBrowser(BaseTarget):
         """Async version of evaluate."""
         return await self._current_page().evaluate(script)
 
+    @public(order=11)
+    @documentation(extends=WebPage.close)
+    def close(self):
+        """Close the browser and clean up resources."""
+        return self._sync(self.a_close())
+
+    async def a_close(self):
+        """Async version of close."""
+        if self._browser:
+            await self._browser.close()
+            self._browser = None
+            self._pages.clear()
+
 
 class WebProcessor(BaseProcessor[Union[str, Page]]):
     """Main processor for web page analysis and interaction."""
 
     def __init__(self, headless: bool = True):
         self._headless = headless
+
+    def documentation(self) -> List[str]:
+        """Documentation for DO.Browse"""
+        docs = WebBrowser().documentation()
+        return docs
 
     async def a_process(self, source: Union[str, Page]) -> List[BaseTarget]:
         """Async version of process.

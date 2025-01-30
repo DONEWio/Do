@@ -1,7 +1,9 @@
+from dataclasses import Field
 from dotenv import load_dotenv
+from openai import BaseModel
 import pytest
-from typing import Any, Optional
-from donew import DO
+from typing import  Optional
+from donew import DO, BROWSE, SEE
 from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
 from smolagents import LiteLLMModel
@@ -165,6 +167,26 @@ def test_code_agent():
     return result
 
 
+def test_code_agent_with_browse():
+    load_dotenv()
+    from pydantic import BaseModel, Field
+    class TeamMember(BaseModel):
+        name: str = Field(description="The name of the person")
+        age: Optional[int] = Field(...,description="approximate age of the person")
+        gender: Optional[str] = Field(description="The gender of the person")
+        is_founder: bool = Field(description="Whether the person is a founder of the company")
+
+    class Team(BaseModel):
+        members: list[TeamMember] = Field(description="The team members")
+
+    model = LiteLLMModel(model_id="deepseek/deepseek-chat")
+    doer = DO.New({"model": model})
+    result = doer.realm([BROWSE]).envision(Team).enact("goto https://unrealists.com and find the team")
+    assert isinstance(result, Team)
+    print(result.model_dump_json(indent=2))
+    return result
+
+
 def test_json_fit_from_pydantic():
     load_dotenv()
     model = LiteLLMModel(model_id="deepseek/deepseek-chat")
@@ -175,7 +197,7 @@ def test_json_fit_from_pydantic():
     class Occupation(BaseModel):
         name: str = Field(description="The name of the occupation")
         description: str = Field(description="The description of the occupation")
-
+    
     class Persona(BaseModel):
         name: str = Field(description="The name of the person")
         age: int = Field(description="The age of the person")

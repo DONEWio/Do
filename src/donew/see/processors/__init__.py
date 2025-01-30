@@ -80,7 +80,7 @@ def public(order: int = 100):
     return decorator
 
 
-def manual(template: str, extends: Callable):
+def documentation(extends: Callable, template: Optional[str] = None):
     """Decorator to mark methods as manual documentation source with templating."""
 
     def decorator(func: F) -> F:
@@ -109,7 +109,10 @@ def manual(template: str, extends: Callable):
         extended_doc = extends.__doc__ or ""
 
         # Apply template
-        wrapper.__doc__ = template.format(extendee=extended_doc.strip())
+        if template:
+            wrapper.__doc__ = template.format(extendee=extended_doc.strip())
+        else:
+            wrapper.__doc__ = extended_doc.strip()
 
         return wrapper
 
@@ -162,7 +165,7 @@ Please use the async methods (a_*) instead.""",
         """Synchronous query operation."""
         return self._sync(self.a_query(text, **kwargs))
 
-    def manuals(self) -> List[str]:
+    def documentation(self) -> List[str]:
         """Returns a list of documentation strings for all public methods in order.
 
         The documentation includes:
@@ -203,7 +206,6 @@ Please use the async methods (a_*) instead.""",
 
         return docs
 
-    @public(order=1)
     def get_metadata(self) -> Dict[str, Any]:
         """Get target metadata.
 
@@ -214,7 +216,6 @@ Please use the async methods (a_*) instead.""",
         return self._metadata
 
     @abstractmethod
-    @public(order=2)
     def debug(self) -> Dict[str, Any]:
         """Return debug information about the target's processing.
 
