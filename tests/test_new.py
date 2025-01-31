@@ -171,21 +171,21 @@ def test_code_agent_with_browse():
     load_dotenv()
     from pydantic import BaseModel, Field
     class TeamMember(BaseModel):
+        """A team member"""
         name: str = Field(description="The name of the person")
-        age: Optional[int] = Field(...,description="approximate age of the person")
-        gender: Optional[str] = Field(description="The gender of the person")
+        bio: Optional[str] = Field(...,description="a short bio of the person if known")
         is_founder: bool = Field(description="Whether the person is a founder of the company")
 
     class Team(BaseModel):
+        """The team"""
         members: list[TeamMember] = Field(description="The team members")
 
-    model = LiteLLMModel(model_id="deepseek/deepseek-chat")
+    model = LiteLLMModel(model_id="gpt-4o-mini")
     doer = DO.New({"model": model})
     result = doer.realm([BROWSE]).envision(Team).enact("goto https://unrealists.com and find the team")
     assert isinstance(result, Team)
     print(result.model_dump_json(indent=2))
     return result
-
 
 def test_json_fit_from_pydantic():
     load_dotenv()

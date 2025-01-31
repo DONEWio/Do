@@ -99,8 +99,12 @@ def enable_tracing():
     endpoint = "http://0.0.0.0:6006/v1/traces"
     trace_provider = TracerProvider()
     trace_provider.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter(endpoint)))
-
-    SmolagentsInstrumentor().instrument(tracer_provider=trace_provider)
+    
+    # Set as global provider
+    trace.set_tracer_provider(trace_provider)
+    
+    # Instrument after setting provider
+    SmolagentsInstrumentor().instrument()
 
     # Mark tracing as enabled
     enable_tracing._tracing_enabled = True

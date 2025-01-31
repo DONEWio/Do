@@ -4,12 +4,7 @@ from smolagents.tools import Tool
 from donew.new.runtimes.local import LocalPythonInterpreter
 from donew.new.types import Model
 from donew.see.processors.web import WebProcessor
-from openinference.instrumentation.smolagents import SmolagentsInstrumentor
 from opentelemetry import trace
-
-# Initialize the instrumentor
-_instrumentor = SmolagentsInstrumentor()
-_instrumentor.instrument()
 
 STATE = {}
 documentation = "\n".join(WebProcessor().documentation())
@@ -72,6 +67,21 @@ Here are the rules you should always follow to solve your task:
 9. The state persists between code executions: so if in one step you've created variables or imported modules, these will all persist.
 10. Don't give up! You're in charge of solving the task, not providing directions to solve it.
 
+!!! IMPORTANT:
+at your first call dont forget to initialize the browser.
+```py
+from donew import DO # dont forget to import DO
+browser = DO.Browse("https://unrealists.com")
+...
+browser.text()
+```
+when returning a response get it as a text by calling `browser.text()`
+dont return browser object, just the text.
+
+text return links with their element_id. so dont shy away from browsing it like a human, meaning try to click on the links and see what happens if it is necessary.
+
+DONT TRUNCATE OR CUT OFF ANYTHING. return what you see. that is RELEVANT to the task request.
+
 Now Begin! If you solve the task correctly, you will receive a reward of $1,000,000.
 """.format(
     documentation=documentation,
@@ -111,27 +121,33 @@ class BrowseTool(Tool):
         super().__init__(*args, **kwargs)
         self.model = kwargs.get("model", None)
 
-    def forward(
-        self,
-        task: str,
-    ):
+    def forward(self, task: str):
         """Execute a task with validation and context management"""
-
         try:
-            # Ensure we have a tracer
-            tracer = trace.get_tracer(__name__)
-            
-            # Create and configure the agent
-            agent = CodeAgent(
-                tools=[],
-                model=self.model,
-                add_base_tools=False,
-                system_prompt=CODE_SYSTEM_PROMPT,
-            )
-            agent.python_executor = self.runtime
-
-            return agent.run(task)
+            # Try to get tracer, but don't fail if tracing is not enabled
+            try:
+                tracer = trace.get_tracer(__name__)
+                with tracer.start_as_current_span("browse_task") as span:
+                    span.set_attribute("task", task)
+                    result = self._execute_task(task)
+                    span.set_attribute("result", str(result))
+                    return result
+            except Exception:  # Tracing not available or failed
+                return self._execute_task(task)
+                
         except Exception as e:
             return str(e)
+
+    def _execute_task(self, task: str):
+        """Internal method to execute the task"""
+        # Create and configure the agent
+        agent = CodeAgent(
+            tools=[],
+            model=self.model,
+            add_base_tools=False,
+            system_prompt=CODE_SYSTEM_PROMPT,
+        )
+        agent.python_executor = self.runtime
+        return agent.run(task)
 
 #
