@@ -2,7 +2,7 @@ from dataclasses import Field
 from dotenv import load_dotenv
 from openai import BaseModel
 import pytest
-from typing import  Optional
+from typing import  List, Optional
 from donew import DO, BROWSE, SEE
 from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
@@ -165,6 +165,45 @@ def test_code_agent():
     result = doer.enact("calculate fibonacci of 125")
     assert fibonacci(125) == int(result)
     return result
+
+
+def test_code_agent_that_counts_Rs():
+    load_dotenv()
+    model = LiteLLMModel(model_id="gpt-4o-mini")
+    doer = DO.New({"model": model})
+    result = doer.enact("count the number of Rs in the word 'strawberry'.")
+    assert result == 3
+    return result
+
+
+
+
+def test_code_agent_that_counts_Rs_using_aws_bedroc_sonnet():
+    load_dotenv()
+    model = LiteLLMModel(model_id="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+    doer = DO.New({"model": model})
+    result = doer.enact("count the number of Rs in the word 'strawberry'.")
+    assert result == 3
+    return result
+
+
+def test_code_agent_that_lists_countries_starting_with_B_with_a_catch():
+    load_dotenv()
+    model = LiteLLMModel(model_id="gpt-4o")
+    from pydantic import BaseModel, Field
+    
+
+    reference_list = ["Bahamas", "Bahrain", "Barbados", "Bhutan", "Bolivia", "Botswana", "Brazil", "Bulgaria", "Burkina Faso", "Burundi"]
+    
+    class Countries(BaseModel):
+        countries: List[str] = Field(description="The list of countries whose names begin with 'B' and do not contain the letter 'E'. The names are sorted and each starts with a capital letter.")
+    
+    doer = DO.New({"model": model})
+    result = doer.envision(Countries).enact("fullfill")
+   
+    assert result.countries == reference_list
+    return result
+
 
 
 def test_code_agent_with_browse():

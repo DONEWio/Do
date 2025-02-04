@@ -37,6 +37,7 @@ Thought: I will now generate an image showcasing the oldest person.
 Code:
 ```py
 image = image_generator("A portrait of John Doe, a 55-year-old man living in Canada.")
+
 final_answer(image)
 ```<end_code>
 
@@ -160,6 +161,7 @@ Above example were using notional tools that might not exist for you. On top of 
 {{managed_agents_descriptions}}
 
 Here are the rules you should always follow to solve your task:
+0. Do not naively TRUST YOUR INSTINCTS. USE CODE TO VERIFY YOUR THOUGHTS. You see things through the lens of tokenizer. Real world must also manifest itself in your code.!!!!
 1. Always provide a 'Thought:' sequence, and a 'Code:\n```py' sequence ending with '```<end_code>' sequence, else you will fail.
 2. Use only variables that you have defined!
 3. Always use the right arguments for the tools. DO NOT pass the arguments as a dict as in 'answer = wiki({'query': "What is the place where James Bond lives?"})', but use the arguments directly as in 'answer = wiki(query="What is the place where James Bond lives?")'.
@@ -172,6 +174,9 @@ Here are the rules you should always follow to solve your task:
 10. Don't give up! You're in charge of solving the task, not providing directions to solve it.
 
 Now Begin! If you solve the task correctly, you will receive a reward of $1,000,000.
+
+
+
 """
 
 CONSTRAINTS_PROMPT_PRE = """DISCLAIMER, a constraint has been expected. you can observe this in final_answer tool's input schema.
@@ -189,6 +194,8 @@ IMPORTANT:
 - for example browser tool returning limited data wont do good to you. so you must let the tool expect the natural language output.
 - at the end of the day you must provide the answer in the format of the input constraints. using final_answer tool with combination of results from the tool calls.
 - ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer tool.
+- FINAL_ANSWER TOOL MUST BE THE LAST TOOL CALL. AND ITS INPUT MUST BE ADHERENT TO ITS INPUT SCHEMA. THIS IS CRITICAL.!!
+- INPUT SCHEMA IS A PYTHON DICTIONARY(derived from pydantic model). THAT IS THE ONLY FORMAT THAT FINAL_ANSWER TOOL WILL ACCEPT.
 - YOU CAN DO IT! I TRUST YOU!
 
 """
@@ -236,6 +243,11 @@ class FinalAnswerTool(Tool):
                     "description": "The final answer to the problem"
                 }
             }
+
+    def __call__(self, *args, sanitize_inputs_outputs: bool = False, **kwargs):
+        if not self.is_initialized:
+            self.setup()
+        return self.forward(*args, **kwargs)
 
     def forward(self, answer):
         try:
