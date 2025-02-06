@@ -101,7 +101,7 @@ class FinalAnswerTool(Tool):
         return answer
 
 
-class BrowseTool(Tool):
+class BrowseAssistant(Tool):
     name = "browse"
     description = """
     This browser tool is used to browse the web.

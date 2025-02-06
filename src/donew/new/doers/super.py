@@ -9,8 +9,8 @@ from donew.utils import (
     parse_to_pydantic,
     pydantic_model_to_simple_schema,
 )
-from donew.new.assistants.browse import BrowseTool
-from donew.new.assistants.new import NewTool
+from donew.new.assistants.browse import BrowseAssistant
+from donew.new.assistants.new import NewAssistant
 from smolagents.tools import Tool
 
 
@@ -327,10 +327,10 @@ class SuperDoer(BaseDoer):
             base_tools = []
             for provision in self._provisions:
                 if provision == BROWSE:
-                    base_tools.append(BrowseTool(model=self.model))
+                    base_tools.append(BrowseAssistant(model=self.model))
                 if provision:
                     if isinstance(provision, SuperDoer):
-                        base_tools.append(NewTool(superdoer=provision))
+                        base_tools.append(NewAssistant(superdoer=provision))
 
             system_prompt = CODE_SYSTEM_PROMPT.format(
                 name=self._name,
@@ -358,10 +358,10 @@ class SuperDoer(BaseDoer):
             if self._constraints:
                 if is_pydantic_model(self._constraints):
                     constraints_schema = pydantic_model_to_simple_schema(self._constraints)
-                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"
+                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{PYDANTIC_DICT_CONSTRAINTS_PROMPT_POST}\n---\n"
                 elif isinstance(self._constraints, dict):
                     constraints_schema = json.dumps(self._constraints, indent=2)
-                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"
+                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{PYDANTIC_DICT_CONSTRAINTS_PROMPT_POST}\n---\n"
                 else:
                     constraints_schema = str(self._constraints)
                     task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"

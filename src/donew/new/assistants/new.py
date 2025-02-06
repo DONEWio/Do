@@ -10,7 +10,7 @@ STATE = {}
 
 
 
-class NewTool(Tool):
+class NewAssistant(Tool):
     name = "new"
     description = """"""
     inputs = {
