@@ -330,12 +330,13 @@ class SuperDoer(BaseDoer):
             # Replace the default FinalAnswerTool with our constrained version
             agent.tools["final_answer"] = final_answer_tool
             if self._constraints:
-                constraints_schema = pydantic_model_to_simple_schema(self._constraints)
-
-                task = (
-                    task
-                    + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE+json.dumps(constraints_schema, indent=2)+CONSTRAINTS_PROMPT_POST}\n---\n"
-                )
+                if is_pydantic_model(self._constraints):
+                    constraints_schema = pydantic_model_to_simple_schema(self._constraints)
+                elif isinstance(self._constraints, dict):
+                    constraints_schema = json.dumps(constraints_schema, indent=2)
+                else:
+                    constraints_schema = str(self._constraints)
+                task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{CONSTRAINTS_PROMPT_POST}\n---\n"
 
             result = agent.run(task)
             if result:
