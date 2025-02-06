@@ -5,19 +5,18 @@ from donew.see.processors.web import WebProcessor
 
 
 async def See(
-    paths, config: Optional[dict] = None
+    paths, **kwargs
 ) -> Union[BaseTarget, Sequence[BaseTarget]]:
     """Static method to analyze images using global or override config
 
     Args:
         image_paths: Single image path or list of image paths
-        config: Optional config override {"ocr_provider": OCRProvider, "device": str}
+        kwargs: Optional config override {headless: bool, chrome_path: str}
 
     Returns:
         Single Target or sequence of Targets depending on input
     """
-    if config is None:
-        config = {"headless": True}
+
 
     # Initialize processors with config
 
@@ -30,7 +29,7 @@ async def See(
             if paths == "https://documentation/request":
                 return WebProcessor()
             else:
-                web_processor = WebProcessor(config["headless"])
+                web_processor = WebProcessor(**kwargs)
                 result = await web_processor.a_process(paths)
                 return result[0]
         raise NotImplementedError("File type not implemented")
@@ -42,7 +41,7 @@ async def See(
             if path.endswith(".pdf"):
                 raise NotImplementedError("PDF processing not implemented")
             elif path.startswith("http"):
-                web_processor = WebProcessor(config["headless"])
+                web_processor = WebProcessor(**kwargs)
                 web_result = await web_processor.a_process(path)
                 results.extend(web_result)
             else:

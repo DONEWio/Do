@@ -7,9 +7,16 @@
     for (const [id, metadata] of Object.entries(elements)) {
         if (!metadata.bounding_box || !metadata.state.isVisible) continue;
 
+
+
+        if (!metadata.is_interactive && !(metadata.element_type in ['button', 'link', 'input'])) continue;
+            
+        
+
         const box = metadata.bounding_box;
         const highlight = document.createElement('div');
         highlight.className = 'DoSee-highlight';
+
 
         // Set color based on element type
         const colors = {
@@ -21,19 +28,20 @@
         };
         const color = colors[metadata.element_type] || colors.text;
 
+
         highlight.style.cssText = `
             left: ${box.x}px;
             top: ${box.y}px;
             width: ${box.width}px;
             height: ${box.height}px;
-            border: 2px solid ${color};
+            border: 1px dotted  ${color};
             --highlight-color: ${color};
         `;
 
-        // Add label
+        // Add just the element ID as label
         const label = document.createElement('div');
         label.className = 'DoSee-label';
-        label.textContent = metadata.element_type;
+        label.textContent = id;
         highlight.appendChild(label);
 
         document.body.appendChild(highlight);

@@ -25,6 +25,34 @@ def get_script_path(filename: str) -> str:
         .read_text()
     )
 
+def merge_args(default_args, user_args):
+    """Merge default and user provided args, overriding duplicates from default with user provided values.
+    Args are expected in the format '--ARG=VALUE'."""
+    def parse_arg(arg):
+        if arg.startswith("--") and "=" in arg:
+            key, val = arg[2:].split("=", 1)
+            return key, val
+        elif arg.startswith("--"):
+            return arg[2:], None
+        return None, arg
+    merged = {}
+    for arg in default_args:
+        key, val = parse_arg(arg)
+        if key is not None:
+            merged[key] = val
+    for arg in user_args:
+        key, val = parse_arg(arg)
+        if key is not None:
+            merged[key] = val
+    merged_args = []
+    for key, val in merged.items():
+        if val is not None:
+            merged_args.append(f"--{key}={val}")
+        else:
+            merged_args.append(f"--{key}")
+    return merged_args
+
+
 
 @dataclass
 class ElementMetadata:
@@ -93,6 +121,8 @@ class WebPage(BaseTarget):
         async def handle_navigation():
             if not self._page:
                 return
+            
+            await asyncio.sleep(3)
 
             # Log navigation as an interaction
             self._interaction_history.append(
@@ -119,18 +149,20 @@ class WebPage(BaseTarget):
                 await self.toggle_annotation(True)
 
         # Listen for navigation events
-        self._page.on("load", lambda _: asyncio.create_task(handle_navigation()))
+        self._page.on("domcontentloaded", lambda _: asyncio.create_task(handle_navigation()))
 
         # Set up route handler to continue on error responses
         async def handle_route(route):
+            
             response = await route.fetch()
             await route.fulfill(response=response)
 
-        await self._page.route("**/*", handle_route)
+        await self._page.route(r"^(?!chrome-extension:).*", handle_route)
 
         # Initial navigation with error handling
         try:
-            await self._page.goto(url, wait_until="networkidle")
+            await self._page.goto(url, wait_until="load")
+            await asyncio.sleep(3)
         except Exception as e:
             if "ERR_HTTP_RESPONSE_CODE_FAILURE" in str(e) and self._headless:
                 raise ValueError(
@@ -791,13 +823,49 @@ class WebBrowser(BaseTarget):
 class WebProcessor(BaseProcessor[Union[str, Page]]):
     """Main processor for web page analysis and interaction."""
 
-    def __init__(self, headless: bool = True):
-        self._headless = headless
+    def __init__(self, **kwargs):
+        #  a helper function to merge default args with user provided args
+       
+        default_args = ["--disable-infobars","--remote-debugging-pipe","--no-startup-window"]
+        user_args = kwargs.get("args", [])
+        if not isinstance(user_args, list):
+            user_args = [user_args]
+        merged_args = merge_args(default_args, user_args) if user_args else default_args
+
+        self._kwargs = {
+            "headless": kwargs.get("headless", True),
+            "executable_path": kwargs.get("chrome_path", None),
+            "user_data_dir": kwargs.get("user_data_dir", None),
+            "channel": kwargs.get("channel", "chromium"),
+            "no_viewport": kwargs.get("no_viewport", True),
+            "screen": kwargs.get("screen", {"width": 1920, "height": 1080}),
+            "bypass_csp": kwargs.get("bypass_csp", False),
+            "args": merged_args
+        }
+        self._headless = self._kwargs["headless"]
+        self.chrome_path = self._kwargs["executable_path"]
+        self.user_data_dir = self._kwargs["user_data_dir"]
+        self.channel = self._kwargs["channel"]
+        self.args = self._kwargs["args"]
+        if "viewport" not in kwargs:
+            self.args.append("--start-maximized")
 
     def documentation(self) -> List[str]:
         """Documentation for DO.Browse"""
         docs = WebBrowser().documentation()
         return docs
+    
+    async def _launch_browser(self):
+        playwright = await async_playwright().start()
+        if self.user_data_dir:
+            self._kwargs["ignore_default_args"] = True
+          
+            browser = await playwright.chromium.launch_persistent_context(**self._kwargs)
+        else:
+            browser = await playwright.chromium.launch(
+                **self._kwargs
+            )
+        return browser
 
     async def a_process(self, source: Union[str, Page]) -> List[BaseTarget]:
         """Async version of process.
@@ -809,8 +877,7 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
             List[BaseTarget]: A list containing the WebBrowser instance.
         """
         # Initialize Playwright and browser
-        playwright = await async_playwright().start()
-        browser = await playwright.chromium.launch(headless=self._headless)
+        browser = await self._launch_browser()
         pw_page = await browser.new_page()
         web_page = WebPage(
             _page=pw_page, _headless=self._headless, _annotation_enabled=False

@@ -12,9 +12,9 @@ T = TypeVar("T", bound="BaseDoer")
 @dataclass(frozen=True)
 class BaseDoer(ABC):
     """Base class for all doers"""
-
+    _name: str
+    _purpose: str
     _model: Optional[Model] = None
-    _agent: Optional[TransformersModel | HfApiModel | LiteLLMModel] = None
     _runtime: Optional[Runtime] = None
     _constraints: Optional[dict] = None
     _provisions: List[Provision] = field(default_factory=list)
@@ -25,8 +25,7 @@ class BaseDoer(ABC):
         """Get model from either direct model or agent"""
         if self._model:
             return self._model
-        if self._agent and self._agent.model:
-            return self._agent.model
+        
         raise ValueError("No model available - provide either model or agent")
 
     @abstractmethod

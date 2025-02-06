@@ -1,4 +1,5 @@
 import time
+from dotenv import load_dotenv
 import pytest
 from donew import DO, KeyValueSection, TableSection
 import asyncio
@@ -290,6 +291,19 @@ def test_browser_state(httpbin_url, httpbin_available):
             assert any("test_input" in str(row) for row in timeline_section["rows"])
     finally:
         browser.close()
+
+
+def test_browser_config(httpbin_url, httpbin_available):
+    load_dotenv()
+    import os
+    chrome_path = os.getenv("CHROME_PATH")
+    user_data_dir = os.getenv("USER_DATA_DIR")
+    profile=os.getenv("CHROME_PROFILE")
+    args = ["--profile-directory=" + profile]
+    DO.Config(chrome_path=chrome_path, user_data_dir=user_data_dir, channel="chrome",args=args, headless=False)
+    browser = DO.Browse("https://docs.google.com")
+    time.sleep(30)  # Sleep for 30 seconds
+    browser.close()
 
 
 def test_knowledge_graph_extraction(httpbin_url, httpbin_available):

@@ -38,15 +38,15 @@ class DO:
 
     @staticmethod
     def Config(
-        headless: bool = True,
+        **kwargs,
     ):
         """Set global configuration for DO class
 
         Args:
-           headless:
+           kwargs: Configuration dictionary
         """
         DO._global_config = {
-            "headless": headless,
+            **kwargs,
         }
 
     @staticmethod
@@ -74,28 +74,28 @@ Please use the async methods (A_browse, A_new) instead.""",
 
     @staticmethod
     async def A_browse(
-        paths, config: Optional[dict] = None
+        paths, **kwargs
     ) -> Union[WebBrowser, Sequence[WebBrowser]]:
         """Async version of Browse"""
-        c = config if config else DO._global_config
+        c = kwargs if kwargs else DO._global_config
         return cast(
-            Union[WebBrowser, Sequence[WebBrowser]], await See(paths=paths, config=c)
+            Union[WebBrowser, Sequence[WebBrowser]], await See(paths=paths, **c)
         )
 
     @staticmethod
     def Browse(
-        paths, config: Optional[dict] = None
+        paths, **kwargs
     ) -> Union[WebBrowser, Sequence[WebBrowser]]:
         """Synchronous Browse operation.
 
         Args:
             paths: URL or list of URLs to browse
-            config: Optional configuration dictionary
+            **kwargs: Optional configuration dictionary {headless: bool, chrome_path: str}
 
         Returns:
             WebBrowser instance or sequence of WebBrowser instances
         """
-        return DO._sync(DO.A_browse(paths, config))
+        return DO._sync(DO.A_browse(paths, **kwargs))
 
     @staticmethod
     async def A_new(config: dict[str, Any]) -> SuperDoer:

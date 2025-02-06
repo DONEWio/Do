@@ -75,7 +75,7 @@
         return null;
     }
 
-    function processInteractiveElement(element) {
+    function processClickableElement(element) {
         // Process buttons and links
         let elementType = 'text';
         if (element.tagName === 'BUTTON' || element.getAttribute('role') === 'button') {
@@ -102,6 +102,50 @@
         };
     }
 
+    function processElementsPotentiallyClickable(element) {
+        let isInteractive = false;
+        let elementType = 'text';
+
+        // Check for interactive ARIA roles
+        const role = element.getAttribute('role');
+        const interactiveRoles = ['option', 'menuitem', 'tab', 'switch', 'checkbox', 'radio', 'button', 'link'];
+        if (role && interactiveRoles.includes(role.toLowerCase())) {
+            isInteractive = true;
+            elementType = role.toLowerCase();
+        }
+
+        // Check for tabindex attribute which indicates focusability
+        const tabindexAttr = element.getAttribute('tabindex');
+        if (!isInteractive && tabindexAttr !== null && !isNaN(parseInt(tabindexAttr, 10)) && parseInt(tabindexAttr, 10) >= 0) {
+            isInteractive = true;
+            elementType = 'clickable';
+        }
+
+        // Check for inline onclick attribute or defined onclick property
+        if (!isInteractive && (element.getAttribute('onclick') || typeof element.onclick === 'function')) {
+            isInteractive = true;
+            elementType = 'clickable';
+        }
+
+        // Check computed style for pointer cursor
+        if (!isInteractive) {
+            const computedStyle = window.getComputedStyle(element);
+            if (computedStyle.cursor === 'pointer') {
+                isInteractive = true;
+                elementType = 'clickable';
+            }
+        }
+
+        // Derive a label if available using the existing findElementLabel function
+        const elementLabel = findElementLabel(element);
+
+        return {
+            elementType,
+            elementLabel,
+            isInteractive
+        };
+    }
+
     function getElementMetadata(element, elementId) {
         const rect = element.getBoundingClientRect();
         const computedStyle = window.getComputedStyle(element);
@@ -122,11 +166,13 @@
         if (element.tagName.toUpperCase() === 'SVG') {
             elementInfo = { elementType: 'image', isInteractive: false };
         } else if (['BUTTON', 'A'].includes(element.tagName)) {
-            elementInfo = processInteractiveElement(element);
+            elementInfo = processClickableElement(element);
         } else if (['INPUT', 'SELECT', 'TEXTAREA'].includes(element.tagName)) {
             elementInfo = processFormElement(element);
         } else if (element.tagName === 'IMG' || element.getAttribute('role') === 'img') {
             elementInfo = { elementType: 'image', isInteractive: false };
+        } else {
+            elementInfo = processElementsPotentiallyClickable(element);
         }
 
         // Return the same ElementMetadata structure as before
