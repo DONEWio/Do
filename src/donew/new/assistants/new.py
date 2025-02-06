@@ -1,11 +1,7 @@
 import json
 from typing import Optional
-from smolagents import CodeAgent
 from smolagents.tools import Tool
-from donew.new.doers.super import SuperDoer
-from donew.new.runtimes.local import LocalPythonInterpreter
-from donew.new.types import Model
-from donew.see.processors.web import WebProcessor
+from donew.new.doers import BaseDoer
 from opentelemetry import trace
 
 from donew.utils import is_pydantic_model, parse_to_pydantic
@@ -16,20 +12,20 @@ STATE = {}
 
 class NewTool(Tool):
     name = "new"
-    description = """
-    This tool is used to create new things.
-    """
+    description = """"""
     inputs = {
         "task": {
             "type": "string",
-            "description": "Natural language description of the task only within the confines of web browsing",
+            "description": "Natural language description of the task that adheres to the pupose of the tool",
         }
     }
     output_type = "string"
-    superdoer: Optional[SuperDoer] = None
+    superdoer: Optional[BaseDoer] = None
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.superdoer = kwargs.get("superdoer", None)
+        self.name = self.superdoer._name
+        self.description = f"This tool has the purpose of {self.superdoer._purpose}"
 
     def forward(self, task: str):
         """Execute a task with validation and context management"""
@@ -37,7 +33,7 @@ class NewTool(Tool):
             # Try to get tracer, but don't fail if tracing is not enabled
             try:
                 tracer = trace.get_tracer(__name__)
-                with tracer.start_as_current_span("browse_task") as span:
+                with tracer.start_as_current_span(self.name) as span:
                     span.set_attribute("task", task)
                     result = self._execute_task(task)
                     span.set_attribute("result", str(result))
@@ -61,7 +57,7 @@ class NewTool(Tool):
         else:
             raise ValueError("Result is not a valid pydantic model or dict")
         return f"""
-        {self.superdoer.name} has completed the task.
+        {self.superdoer._name} has completed the task.
         ---
         {result}
         ---

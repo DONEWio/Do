@@ -24,6 +24,10 @@ During each intermediate step, you can use 'print()' to save whatever important 
 These print outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
 In the end you have to return a final answer using the `final_answer` tool.
 
+WHEN FINAL TOOL has constraints anything you return must match the constraints.
+constrainsts are derived from pydantic model.
+it is a single argument with dictionary as input.
+You will be reminded if this is the case(eg. DISCLAIMER, a constraint has been expected....). keep an eye out for it.!!
 
 
 Here are a few examples using notional tools:
@@ -60,15 +64,15 @@ final_answer(result)
 Task:
 "Answer the question in the variable `question` about the image stored in the variable `image`. The question is in French.
 You have been provided with these additional arguments, that you can access using the keys as variables in your python code:
-{'question': 'Quel est l'animal sur l'image?', 'image': 'path/to/image.jpg'}"
+{{'question': 'Quel est l'animal sur l'image?', 'image': 'path/to/image.jpg'\}}"
 
 Thought: I will use the following tools: `translator` to translate the question into English and then `image_qa` to answer the question on the input image.
 Code:
 ```py
 translated_question = translator(question=question, src_lang="French", tgt_lang="English")
-print(f"The translated question is {translated_question}.")
+print(f"The translated question is {{translated_question}}.")
 answer = image_qa(image=image, question=translated_question)
-final_answer(f"The answer is {answer}")
+final_answer(f"The answer is {{answer}}")
 ```<end_code>
 
 ---
@@ -126,7 +130,7 @@ Thought: I need to get the populations for both cities and compare them: I will 
 Code:
 ```py
 for city in ["Guangzhou", "Shanghai"]:
-    print(f"Population {city}:", search(f"{city} population")
+    print(f"Population {{city}}:", search(f"{{city}} population"))
 ```<end_code>
 Observation:
 Population Guangzhou: ['Guangzhou has a population of 15 million inhabitants as of 2021.']
@@ -169,7 +173,7 @@ Here are the rules you should always follow to solve your task:
 0. Do not naively TRUST YOUR INSTINCTS. USE CODE TO VERIFY YOUR THOUGHTS. You see things through the lens of tokenizer. Real world must also manifest itself in your code.!!!!
 1. Always provide a 'Thought:' sequence, and a 'Code:\n```py' sequence ending with '```<end_code>' sequence, else you will fail.
 2. Use only variables that you have defined!
-3. Always use the right arguments for the tools. DO NOT pass the arguments as a dict as in 'answer = wiki({'query': "What is the place where James Bond lives?"})', but use the arguments directly as in 'answer = wiki(query="What is the place where James Bond lives?")'.
+3. Always use the right arguments for the tools. DO NOT pass the arguments as a dict as in 'answer = wiki({{'query': "What is the place where James Bond lives?"}})', but use the arguments directly as in 'answer = wiki(query="What is the place where James Bond lives?")'.
 4. Take care to not chain too many sequential tool calls in the same code block, especially when the output format is unpredictable. For instance, a call to search has an unpredictable return format, so do not have another tool call that depends on its output in the same block: rather output results with print() to use them in the next block.
 5. Call a tool only when needed, and never re-do a tool call that you previously did with the exact same parameters.
 6. Don't name any new variable with the same name as a tool: for instance don't name a variable 'final_answer'.
@@ -187,7 +191,7 @@ Now Begin! If you solve the task correctly, you will receive a reward of $1,000,
 CONSTRAINTS_PROMPT_PRE = """DISCLAIMER, a constraint has been expected. you can observe this in final_answer tool's input schema.
 """
 
-CONSTRAINTS_PROMPT_POST = """
+PYDANTIC_DICT_CONSTRAINTS_PROMPT_POST = """
 you must call subsequent tool calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
 IMPORTANT:
 - a tool call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
@@ -200,9 +204,30 @@ IMPORTANT:
 - at the end of the day you must provide the answer in the format of the input constraints. using final_answer tool with combination of results from the tool calls.
 - ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer tool.
 - FINAL_ANSWER TOOL MUST BE THE LAST TOOL CALL. AND ITS INPUT MUST BE ADHERENT TO ITS INPUT SCHEMA. THIS IS CRITICAL.!!
-- INPUT SCHEMA IS A PYTHON DICTIONARY(derived from pydantic model). THAT IS THE ONLY FORMAT THAT FINAL_ANSWER TOOL WILL ACCEPT.
-- YOU CAN DO IT! I TRUST YOU!
 
+
+
+CRITICAL:
+- INPUT SCHEMA IS A PYTHON DICTIONARY(derived from pydantic model). THAT IS THE ONLY FORMAT THAT FINAL_ANSWER TOOL WILL ACCEPT.
+- I REPEAT INPUT SCHEMA IS A PYTHON DICTIONARY. NOTHING ELSE no string, no list, no json, it is a python dictionary!!
+
+YOU CAN DO IT! I TRUST YOU!
+"""
+
+
+STR_CONSTRAINTS_PROMPT_POST = """
+you must call subsequent tool calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+IMPORTANT:
+- a tool call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
+- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE TOOL CALLS KNOWS WHAT TO RETURN.
+- for example if we need a bio or receipt stated in final_answer tool, you must rephrase the requirements in a way that the tool call knows what to return.
+- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer tools requirements.
+- you will do the formatting at the end of the day but it is your responsibility to ensure tool calls knows what to return.
+- not every tool can provide such data so be mindful of that.
+- for example browser tool returning limited data wont do good to you. so you must let the tool expect the natural language output.
+- at the end of the day you must provide the answer in the format of the input constraints. using final_answer tool with combination of results from the tool calls.
+- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer tool.
+YOU CAN DO IT! I TRUST YOU!
 """
 
 
@@ -287,7 +312,7 @@ class SuperDoer(BaseDoer):
     """Advanced task execution with constraint validation and context management"""
 
     def envision(
-        self, constraints: dict[str, Any], verify: Optional[Callable[[Any], Any]] = None
+        self, constraints: Optional[dict[str, Any]] = None, verify: Optional[Callable[[Any], Any]] = None
     ) -> "SuperDoer":
         """Return new instance with constraints"""
         return replace(self, _constraints=constraints, _verify=verify)
@@ -329,14 +354,17 @@ class SuperDoer(BaseDoer):
 
             # Replace the default FinalAnswerTool with our constrained version
             agent.tools["final_answer"] = final_answer_tool
+            
             if self._constraints:
                 if is_pydantic_model(self._constraints):
                     constraints_schema = pydantic_model_to_simple_schema(self._constraints)
+                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"
                 elif isinstance(self._constraints, dict):
-                    constraints_schema = json.dumps(constraints_schema, indent=2)
+                    constraints_schema = json.dumps(self._constraints, indent=2)
+                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"
                 else:
                     constraints_schema = str(self._constraints)
-                task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{CONSTRAINTS_PROMPT_POST}\n---\n"
+                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"
 
             result = agent.run(task)
             if result:

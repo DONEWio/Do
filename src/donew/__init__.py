@@ -102,7 +102,7 @@ Please use the async methods (A_browse, A_new) instead.""",
         """Async version of New"""
         model = config["model"]
         runtime = Runtime(**config["runtime"]) if "runtime" in config else None
-        return SuperDoer(_model=model, _runtime=runtime)
+        return SuperDoer(_model=model, _runtime=runtime, _name=config["name"], _purpose=config["purpose"])
 
     @staticmethod
     def New(config: dict[str, Any]) -> SuperDoer:

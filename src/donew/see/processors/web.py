@@ -842,13 +842,7 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
             "bypass_csp": kwargs.get("bypass_csp", False),
             "args": merged_args
         }
-        self._headless = self._kwargs["headless"]
-        self.chrome_path = self._kwargs["executable_path"]
-        self.user_data_dir = self._kwargs["user_data_dir"]
-        self.channel = self._kwargs["channel"]
-        self.args = self._kwargs["args"]
-        if "viewport" not in kwargs:
-            self.args.append("--start-maximized")
+        
 
     def documentation(self) -> List[str]:
         """Documentation for DO.Browse"""
@@ -857,13 +851,15 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
     
     async def _launch_browser(self):
         playwright = await async_playwright().start()
-        if self.user_data_dir:
+        if self._kwargs["user_data_dir"]:
             self._kwargs["ignore_default_args"] = True
           
             browser = await playwright.chromium.launch_persistent_context(**self._kwargs)
         else:
+            kwargs = {k: v for k, v in self._kwargs.items() if k in ["headless", "executable_path", "channel"]}
+
             browser = await playwright.chromium.launch(
-                **self._kwargs
+                **kwargs
             )
         return browser
 
@@ -880,12 +876,12 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
         browser = await self._launch_browser()
         pw_page = await browser.new_page()
         web_page = WebPage(
-            _page=pw_page, _headless=self._headless, _annotation_enabled=False
+            _page=pw_page, _headless=self._kwargs["headless"], _annotation_enabled=False
         )
         await web_page.process(source)
 
         web_browser = WebBrowser(
-            _browser=browser, _pages=[web_page], _headless=self._headless
+            _browser=browser, _pages=[web_page], _headless=self._kwargs["headless"]
         )
 
         return [web_browser]
