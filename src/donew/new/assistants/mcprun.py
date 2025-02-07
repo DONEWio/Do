@@ -22,6 +22,7 @@ class MCPRun(Provision):
         self.model = kwargs.get("model", None)
         self.mcprun_profile = kwargs.get("profile", "default")
         self.mcprun_task = kwargs.get("task", None)
+        self.inputs = kwargs.get("inputs", {})
         self.name = self.mcprun_task
         self.mcprun_presigned_url = None
         self.mcprun_login_timeout = kwargs.get("mcprun_login_timeout", 60)
@@ -92,7 +93,7 @@ class MCPRun(Provision):
             webbrowser.open(approve_url)
         except Exception as e:
             print(f"Error opening browser: {e}")
-            print(f"Please open the following URL in your browser and approve the login within 60 seconds: {approve_url}")
+            print(f"Please open the following URL in your browser and approve the login within {self.mcprun_login_timeout} seconds: {approve_url}")
         print("Waiting for login approval...")
         for _ in range(self.mcprun_login_timeout//2):
             resp = self.api_request(f"/login/poll?code={code}", "GET")
