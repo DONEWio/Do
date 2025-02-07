@@ -2,9 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 from dataclasses import dataclass, field
 
-from donew.new.types import Provision, Model, BROWSE, SEE, NEW
-from donew.new.runtime import Runtime
-from smolagents import TransformersModel, HfApiModel, LiteLLMModel
+from donew.new.assistants import Provision
+from donew.new.types import Model
+
+
 
 
 T = TypeVar("T", bound="BaseDoer")
@@ -14,8 +15,7 @@ class BaseDoer(ABC):
     """Base class for all doers"""
     _name: str
     _purpose: str
-    _model: Optional[Model] = None
-    _runtime: Optional[Runtime] = None
+    _model: Model
     _constraints: Optional[dict] = None
     _provisions: List[Provision] = field(default_factory=list)
     _verify: Optional[Callable[[Any], Any]] = None

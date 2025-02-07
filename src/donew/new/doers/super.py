@@ -1,9 +1,11 @@
 import json
 from typing import Any, Callable, List, Optional
 from dataclasses import dataclass, replace
+from donew.new.assistants import Provision
 from donew.new.doers import BaseDoer
 from smolagents import CodeAgent
-from donew.new.types import BROWSE, ProvisionType
+from donew.new.runtimes.local import LocalPythonInterpreter
+from donew.see.processors.web import WebBrowser
 from donew.utils import (
     is_pydantic_model,
     parse_to_pydantic,
@@ -24,10 +26,6 @@ During each intermediate step, you can use 'print()' to save whatever important 
 These print outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
 In the end you have to return a final answer using the `final_answer` tool.
 
-WHEN FINAL TOOL has constraints anything you return must match the constraints.
-constrainsts are derived from pydantic model.
-it is a single argument with dictionary as input.
-You will be reminded if this is the case(eg. DISCLAIMER, a constraint has been expected....). keep an eye out for it.!!
 
 
 Here are a few examples using notional tools:
@@ -191,7 +189,32 @@ Now Begin! If you solve the task correctly, you will receive a reward of $1,000,
 CONSTRAINTS_PROMPT_PRE = """DISCLAIMER, a constraint has been expected. you can observe this in final_answer tool's input schema.
 """
 
-PYDANTIC_DICT_CONSTRAINTS_PROMPT_POST = """
+PYDANTIC_CONSTRAINTS_PROMPT_POST = """
+!! PLEASE REMEMBER THAT CONSTRAINTS ARE A PYTHON DICTIONARY. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as signle input to final_answer tool!!
+
+you must call subsequent tool calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+IMPORTANT:
+- a tool call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
+- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE TOOL CALLS KNOWS WHAT TO RETURN.
+- for example if we need a bio or receipve stated in final_answer tool, you must rephrase the requirements in a way that the tool call knows what to return.
+- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer tools requirements.
+- you will do the formatting at the end of the day but it is your responsibility to ensure tool calls knows what to return.
+- not every tool can provide such data so be mindful of that.
+- for example browser tool returning limited data wont do good to you. so you must let the tool expect the natural language output.
+- at the end of the day you must provide the answer in the format of the input constraints. using final_answer tool with combination of results from the tool calls.
+- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer tool.
+- FINAL_ANSWER TOOL MUST BE THE LAST TOOL CALL. AND ITS INPUT MUST BE ADHERENT TO ITS INPUT SCHEMA. THIS IS CRITICAL.!!
+
+YOU CAN DO IT! I TRUST YOU!
+"""
+
+JSON_CONSTRAINTS_PROMPT_POST = """
+
+- constraints accepts dict, list or string as json compliant. 
+
+!! PLEASE REMEMBER THAT CONSTRAINTS ARE A JSON COMPLIANT. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as SINGLE INPUT to final_answer tool!!
+
+
 you must call subsequent tool calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
 IMPORTANT:
 - a tool call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
@@ -207,9 +230,6 @@ IMPORTANT:
 
 
 
-CRITICAL:
-- INPUT SCHEMA IS A PYTHON DICTIONARY(derived from pydantic model). THAT IS THE ONLY FORMAT THAT FINAL_ANSWER TOOL WILL ACCEPT.
-- I REPEAT INPUT SCHEMA IS A PYTHON DICTIONARY. NOTHING ELSE no string, no list, no json, it is a python dictionary!!
 
 YOU CAN DO IT! I TRUST YOU!
 """
@@ -266,6 +286,13 @@ class FinalAnswerTool(Tool):
                     "description": f"The final answer that must match this format:\n{constraints}",
                 }
             }
+
+            if isinstance(constraints, dict):
+                self.description = f"Provides a final answer to the given problem that strictly follows the format of the input constraints. it is a single input with dictionary as input. "
+            elif is_pydantic_model(constraints):
+                self.description = f"Provides a final answer to the given problem that strictly follows the format of the input constraints. it is a single PYDANTIC COMPLIANT DICTIONARY as input. NO LIST OR OTHER DATA STRUCTURES. "
+          
+    
         else:
             # Default case when no constraints
             self.inputs = {
@@ -317,7 +344,7 @@ class SuperDoer(BaseDoer):
         """Return new instance with constraints"""
         return replace(self, _constraints=constraints, _verify=verify)
 
-    def realm(self, provisions: List[ProvisionType]) -> "SuperDoer":
+    def realm(self, provisions: List[Provision]) -> "SuperDoer":
         """Return new instance with provisions"""
         return replace(self, _provisions=provisions)
 
@@ -326,11 +353,10 @@ class SuperDoer(BaseDoer):
         try:
             base_tools = []
             for provision in self._provisions:
-                if provision == BROWSE:
-                    base_tools.append(BrowseAssistant(model=self.model))
-                if provision:
-                    if isinstance(provision, SuperDoer):
-                        base_tools.append(NewAssistant(superdoer=provision))
+                if isinstance(provision, WebBrowser):
+                    base_tools.append(BrowseAssistant(model=self.model,browser=provision))
+                if isinstance(provision, SuperDoer):
+                    base_tools.append(NewAssistant(superdoer=provision))
 
             system_prompt = CODE_SYSTEM_PROMPT.format(
                 name=self._name,
@@ -354,23 +380,24 @@ class SuperDoer(BaseDoer):
 
             # Replace the default FinalAnswerTool with our constrained version
             agent.tools["final_answer"] = final_answer_tool
+            runtime = LocalPythonInterpreter(additional_authorized_imports=["requests"], tools=agent.tools)
+            agent.python_executor = runtime
+            if params:
+                task = task + f"\n\n---\nparameters:\n---\n{json.dumps(params, indent=2)}\n---\n"
             
             if self._constraints:
                 if is_pydantic_model(self._constraints):
                     constraints_schema = pydantic_model_to_simple_schema(self._constraints)
-                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{PYDANTIC_DICT_CONSTRAINTS_PROMPT_POST}\n---\n"
+                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{PYDANTIC_CONSTRAINTS_PROMPT_POST}\n---\n"
                 elif isinstance(self._constraints, dict):
                     constraints_schema = json.dumps(self._constraints, indent=2)
-                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{PYDANTIC_DICT_CONSTRAINTS_PROMPT_POST}\n---\n"
+                    task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{JSON_CONSTRAINTS_PROMPT_POST}\n---\n"
                 else:
                     constraints_schema = str(self._constraints)
                     task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"
 
             result = agent.run(task)
-            if result:
-                if is_pydantic_model(self._constraints):
-                    result = parse_to_pydantic(result, self._constraints)
-
+            
             return result
 
         except Exception as e:

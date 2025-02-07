@@ -1,16 +1,19 @@
 from typing import Optional
 from smolagents import CodeAgent
 from smolagents.tools import Tool
+from donew.new.assistants import Provision
 from donew.new.runtimes.local import LocalPythonInterpreter
 from donew.new.types import Model
-from donew.see.processors.web import WebProcessor
+from donew.see.processors.web import WebBrowser, WebProcessor
 from opentelemetry import trace
 
 STATE = {}
-documentation = "\n".join(WebProcessor().documentation())
+
 CODE_SYSTEM_PROMPT = """You are an expert assistant who can solve any web browsing task using code blobs. You will be given a task to solve as best you can.
 To do so, you have been given access to a list of tools: these tools are basically Python functions which you can call with code.
 Additionally, you have been given a web browser, which you can use to browse the web.
+
+
 
 To solve the task, you must plan forward to proceed in a series of steps, in a cycle of 'Thought:', 'Code:', and 'Observation:' sequences.
 
@@ -20,34 +23,43 @@ During each intermediate step, you can use 'print()' to save whatever important 
 These print outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
 In the end you have to return a final answer using the `final_answer` tool.
 
-{documentation}
 
-Here are a few examples using notional tools:
+
+--- BROWSER DOCUMENTATION ---
+a local variable "browser" which is an instance of "WebBrowser" is already defined. you can carefully read the documentation of the browser to use it.
+It looks similar to playwright browser using chrome.
+It uses local web browser and user profile is loaded safely.
+It is safe to call this for a potentially auth required website.
+browser tool is isolated and do not share cookies with other tools
+
+{documentation}
 ---
-Task: "Give details about the website https://unrelists.com and the people behind it."
+Here are a few examples using WebBrowser api:
+---
+Task: "Give details about the website https://example.com and the people behind it."
 
 Thought: I will use the browser to visit the website and get the details about people behind it.
 Code:
 ```py
-from donew import DO
-browser = DO.Browse("https://unrelists.com")
+
+browser.goto("https://example.com")
 text = browser.text()
 print(text)
 ```<end_code>
-Observation: "I am going to visit the https://unrelists.com/about"
+Observation: "I am going to visit the https://example.com/about" which is tagged with element id 9
 
 Thought: I will now visit the website and get the details about people behind it.
 Code:
 ```py
-browser.navigate("https://unrelists.com/about")
+browser.click(9)
 text = browser.text()
 print(text)
 ```<end_code>
-Observation: "I have visited the website and got the details about people behind it. Kenan Deniz and Marc Berzick are the founders of the company."
+Observation: "I have visited the website and got the details about people behind it. John Doe and Jane Doe are the founders of the company."
 Thought: I will now generate a python code that submits the details to the `final_answer` toolqq.
 Code:
 ```py
-final_answer(f"The founders of the company are Kenan Deniz and Marc Berzick.")
+final_answer(f"The founders of the company are John Doe and Jane Doe.")
 ```<end_code>
 
 Above example were using notional tools that might not exist for you. On top of performing computations in the Python code snippets that you create, you only have access to these tools:
@@ -68,10 +80,9 @@ Here are the rules you should always follow to solve your task:
 10. Don't give up! You're in charge of solving the task, not providing directions to solve it.
 
 !!! IMPORTANT:
-at your first call dont forget to initialize the browser.
+at the begiging browser bapge is idle at about:blank. nabigate to the target website first.
 ```py
-from donew import DO # dont forget to import DO
-browser = DO.Browse("https://unrealists.com")
+browser.goto("https://unrealists.com")
 ...
 browser.text()
 ```
@@ -83,12 +94,7 @@ text return links with their element_id. so dont shy away from browsing it like 
 DONT TRUNCATE OR CUT OFF ANYTHING. return what you see. that is RELEVANT to the task request.
 
 Now Begin! If you solve the task correctly, you will receive a reward of $1,000,000.
-""".format(
-    documentation=documentation,
-    tool_descriptions="{{tool_descriptions}}",
-    managed_agents_descriptions="{{managed_agents_descriptions}}",
-    authorized_imports="{{authorized_imports}}"
-)
+"""
 class FinalAnswerTool(Tool):
     name = "final_answer"
     description = "Provides a final answer to the given problem."
@@ -101,10 +107,12 @@ class FinalAnswerTool(Tool):
         return answer
 
 
-class BrowseAssistant(Tool):
+class BrowseAssistant(Provision):
     name = "browse"
     description = """
-    This browser tool is used to browse the web.
+    This browser tool is used to browse the web. It uses local web browser and user profile is loaded safely.
+    It is safe to call this for a potentially auth required website.
+    brwoser tool is siolated and do not share cookies with other tools
     """
     inputs = {
         "task": {
@@ -113,14 +121,14 @@ class BrowseAssistant(Tool):
         }
     }
     output_type = "string"
-    tools = {tool.name: tool for tool in [FinalAnswerTool()]}
-    runtime = LocalPythonInterpreter(additional_authorized_imports=["donew"], tools=tools)
+    browser:WebBrowser
     model:Optional[Model] = None
+    
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = kwargs.get("model", None)
-
+        self.browser = kwargs.get("browser", None)
     def forward(self, task: str):
         """Execute a task with validation and context management"""
         try:
@@ -141,13 +149,27 @@ class BrowseAssistant(Tool):
     def _execute_task(self, task: str):
         """Internal method to execute the task"""
         # Create and configure the agent
+
+        documentation = "\n".join(self.browser.documentation())
+
+        system_prompt = CODE_SYSTEM_PROMPT.format(
+            documentation=documentation,
+            tool_descriptions="{{tool_descriptions}}",
+            managed_agents_descriptions="{{managed_agents_descriptions}}",
+            authorized_imports="{{authorized_imports}}"
+        )
+
+        
         agent = CodeAgent(
             tools=[],
             model=self.model,
             add_base_tools=False,
-            system_prompt=CODE_SYSTEM_PROMPT,
+            system_prompt=system_prompt,
         )
-        agent.python_executor = self.runtime
+        tools = {tool.name: tool for tool in [FinalAnswerTool()]}
+        runtime = LocalPythonInterpreter(additional_authorized_imports=["requests"], tools=tools)
+        runtime.state["browser"] = self.browser
+        agent.python_executor = runtime
         return agent.run(task)
 
 #

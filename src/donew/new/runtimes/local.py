@@ -1528,7 +1528,13 @@ def evaluate_python_code(
     global OPERATIONS_COUNT
     OPERATIONS_COUNT = 0
 
+    provided_final_answer = None
+    if "final_answer" not in custom_tools:
+        provided_final_answer = static_tools["final_answer"]
     def final_answer(value):
+        if provided_final_answer:
+            value = provided_final_answer(value)
+        
         raise FinalAnswerException(value)
 
     static_tools["final_answer"] = final_answer

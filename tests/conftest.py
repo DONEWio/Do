@@ -10,7 +10,6 @@ sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 )
 
-from donew import DO
 
 
 def pytest_addoption(parser):
@@ -20,11 +19,6 @@ def pytest_addoption(parser):
         help="URL for httpbin (default: http://localhost:8070)",
     )
 
-
-@pytest.fixture(scope="session", autouse=True)
-def configure_tests():
-    """Global test configuration that runs once before any tests"""
-    DO.Config(headless=False)
 
 
 @pytest.fixture

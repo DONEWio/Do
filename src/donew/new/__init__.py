@@ -1,6 +1,5 @@
-from typing import Any, Optional
+from typing import Any
 from donew.new.doers.super import SuperDoer
-from donew.new.runtime import Runtime
 
 
 async def New(config: dict[str, Any]) -> SuperDoer:
@@ -19,5 +18,4 @@ async def New(config: dict[str, Any]) -> SuperDoer:
     name = config["name"]
     purpose = config["purpose"]
     model = config["model"]
-    runtime = Runtime(**config["runtime"]) if "runtime" in config else None
-    return SuperDoer(_model=model, _runtime=runtime, _purpose=purpose, _name=name)
+    return SuperDoer(_model=model, _purpose=purpose, _name=name)
