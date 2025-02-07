@@ -36,7 +36,7 @@ class MCPRun(Provision):
             raise ValueError("Task not found")
         self.description = task.get("openai", task.get("anthropic", {}).get("prompt", ""))
         self.inputs = {} # TODO: KEINE AHNUNG ALTER
-        self.create_signed_url()
+        # self.create_signed_url() # gets done in run_task automatically
         return self
     
     
@@ -127,6 +127,7 @@ class MCPRun(Provision):
             resp = requests.get(result_url, cookies=self.cookies)
             resp.raise_for_status()
             data = resp.json()
+            print(data)
             if data.get("status") == "ready":
                 return self.extract_final_message(data)
             time.sleep(2)
@@ -160,14 +161,14 @@ class MCPRun(Provision):
         self.mcprun_presigned_url = resp.get("url")
 
 
-    def _execute_task(self, task: str):
+    def _execute_task(self, params: dict):
         result = "<no result>"
         try:
-            result = self.run_task(task)
+            result = self.run_task(params)
         except Exception as e:
             result = str(e)
         return f"""
-        {self.superdoer._name} has completed the task.
+        {self.__class__.__name__} - {self.name} has completed the task.
         ---
         {result}
         ---
@@ -182,7 +183,7 @@ class MCPRun(Provision):
                 tracer = trace.get_tracer(__name__)
                 with tracer.start_as_current_span(self.name) as span:
                     span.set_attribute("task", task)
-                    result = self._execute_task(task)
+                    result = self._execute_task(json.loads(task))
                     span.set_attribute("result", str(result))
                     return result
             except Exception:  # Tracing not available or failed
