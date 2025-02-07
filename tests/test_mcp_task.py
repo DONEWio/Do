@@ -1,4 +1,5 @@
 from donew.new.assistants.mcprun import MCPRun
+from pydantic import BaseModel, Field
 
 def test_mcp_task_init():
     mcp = MCPRun(model="gpt-4o-mini", profile="pachacamac/default", task="FetchWeb").init()
@@ -7,7 +8,10 @@ def test_mcp_task_init():
     assert mcp.name is not None
 
 def test_mcp_task_run():
-    mcp = MCPRun(model="gpt-4o-mini", profile="pachacamac/default", task="FetchWeb").init()
-    result = mcp.forward('{"url": "https://example.com"}')
+    class InputSchema(BaseModel):
+        url: str = Field(description="The url to fetch")
+        
+    mcp = MCPRun(model="gpt-4o-mini", profile="pachacamac/default", task="FetchWeb", input_model=InputSchema).init()
+    result = mcp.forward({"url": "https://example.com"})
     assert result is not None
     

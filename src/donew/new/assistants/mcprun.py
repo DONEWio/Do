@@ -5,6 +5,9 @@ import requests
 from requests.cookies import RequestsCookieJar
 from opentelemetry import trace
 from donew.new.assistants import Provision
+from pydantic import BaseModel
+
+from donew.utils import pydantic_model_to_simple_schema
 
 class MCPRun(Provision):
     name = ""
@@ -12,17 +15,25 @@ class MCPRun(Provision):
     inputs = {
         "task": {
             "type": "string",
-            "description": ""
+            "description": "Task in natural human language"
         }
     }
+    input_model: BaseModel
     output_type = "any"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = kwargs.get("model", None)
         self.mcprun_profile = kwargs.get("profile", "default")
+        self.input_model = kwargs.get("input_model", None)
         self.mcprun_task = kwargs.get("task", None)
-        self.inputs = kwargs.get("inputs", {})
+        self.inputs = {
+            "task": {
+                "type": "object",
+                "description": "The final answer that must match the required schema",
+                **pydantic_model_to_simple_schema(self.input_model),
+            }
+        }
         self.name = self.mcprun_task
         self.mcprun_presigned_url = None
         self.mcprun_login_timeout = kwargs.get("mcprun_login_timeout", 60)
@@ -128,7 +139,6 @@ class MCPRun(Provision):
             resp = requests.get(result_url, cookies=self.cookies)
             resp.raise_for_status()
             data = resp.json()
-            print(data)
             if data.get("status") == "ready":
                 return self.extract_final_message(data)
             time.sleep(2)
@@ -176,7 +186,7 @@ class MCPRun(Provision):
         """
 
 
-    def forward(self, task: str):
+    def forward(self, task: dict):
         """Execute a task with validation and context management"""
         try:
             # Try to get tracer, but don't fail if tracing is not enabled
@@ -184,7 +194,7 @@ class MCPRun(Provision):
                 tracer = trace.get_tracer(__name__)
                 with tracer.start_as_current_span(self.name) as span:
                     span.set_attribute("task", task)
-                    result = self._execute_task(json.loads(task))
+                    result = self._execute_task(task)
                     span.set_attribute("result", str(result))
                     return result
             except Exception:  # Tracing not available or failed
