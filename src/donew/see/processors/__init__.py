@@ -206,14 +206,7 @@ Please use the async methods (a_*) instead.""",
 
         return docs
 
-    def get_metadata(self) -> Dict[str, Any]:
-        """Get target metadata.
 
-        Returns:
-            Dict containing metadata about the target including any custom fields
-            set during processing.
-        """
-        return self._metadata
 
     @abstractmethod
     def debug(self) -> Dict[str, Any]:

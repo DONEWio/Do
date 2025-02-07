@@ -5,7 +5,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# You may obtain a copy of the License at:
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -14,6 +14,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# ---------------------------------------------------------------------------
+# Modifications made by donew, Inc.
+# Additional enhancements and modifications:
+# - Enhanced local runtime with external final_answer tools call support.
+# Extended capabilities added to support DO.New enhanced structured output support.
+#
+# Copyright 2024 donew, Inc. All rights reserved.
+# ---------------------------------------------------------------------------
 import ast
 import builtins
 import difflib
@@ -1528,7 +1537,13 @@ def evaluate_python_code(
     global OPERATIONS_COUNT
     OPERATIONS_COUNT = 0
 
+    provided_final_answer = None
+    if "final_answer" not in custom_tools:
+        provided_final_answer = static_tools["final_answer"]
     def final_answer(value):
+        if provided_final_answer:
+            value = provided_final_answer(value)
+        
         raise FinalAnswerException(value)
 
     static_tools["final_answer"] = final_answer

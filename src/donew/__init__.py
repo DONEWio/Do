@@ -8,13 +8,12 @@ Description of your package.
 __version__ = "0.1.5"  # Remember to update this when bumping version in pyproject.toml
 
 from typing import Literal, Optional, Sequence, Union, cast, Any
+from donew.new.types import Model
 from donew.see.processors import BaseTarget, KeyValueSection, TableSection
 from donew.see.processors.web import WebBrowser, WebProcessor
-from donew.see import See
 from donew.new.doers.super import SuperDoer
-from donew.new.runtime import Runtime
 from donew.utils import run_sync
-from donew.new.types import BROWSE, SEE, NEW, Provision
+
 
 
 
@@ -25,29 +24,11 @@ __all__ = [
     "BaseTarget",
     "WebBrowser",
     "WebProcessor",
-    "See",
-    "BROWSE",  # Add these to __all__ so they're available when importing
-    "SEE",
-    "NEW",
-    "Provision",
 ]
 
 
 class DO:
-    _global_config = None
-
-    @staticmethod
-    def Config(
-        **kwargs,
-    ):
-        """Set global configuration for DO class
-
-        Args:
-           kwargs: Configuration dictionary
-        """
-        DO._global_config = {
-            **kwargs,
-        }
+    
 
     @staticmethod
     def _sync(coro: Any) -> Any:
@@ -57,55 +38,47 @@ class DO:
 Please use the async methods (A_browse, A_new) instead.""",
         )
 
-    @staticmethod
-    async def A_documentation(target: Literal["browse"]):
-        docs = []
-        if target == "browse":
-            browser = await See("https://documentation/request")
-            docs.extend(browser.documentation())
-        else:
-            raise ValueError(f"Invalid target: {target}")
-        docs = "\n".join(docs)
-        return docs
+
 
     @staticmethod
-    def Documentation(target: Literal["browse"]):
-        return DO._sync(DO.A_documentation(target))
-
-    @staticmethod
-    async def A_browse(
-        paths, **kwargs
-    ) -> Union[WebBrowser, Sequence[WebBrowser]]:
+    async def A_browse(**kwargs) -> Union[WebBrowser, Sequence[WebBrowser]]:
         """Async version of Browse"""
-        c = kwargs if kwargs else DO._global_config
-        return cast(
-            Union[WebBrowser, Sequence[WebBrowser]], await See(paths=paths, **c)
-        )
+
+       
+       
+        web_processor = WebProcessor(**kwargs)
+        result = await web_processor.a_process()
+        return result
+       
+
+        
 
     @staticmethod
-    def Browse(
-        paths, **kwargs
-    ) -> Union[WebBrowser, Sequence[WebBrowser]]:
+    def Browse(**kwargs) -> Union[WebBrowser, Sequence[WebBrowser]]:
         """Synchronous Browse operation.
 
         Args:
-            paths: URL or list of URLs to browse
             **kwargs: Optional configuration dictionary {headless: bool, chrome_path: str}
 
         Returns:
             WebBrowser instance or sequence of WebBrowser instances
         """
-        return DO._sync(DO.A_browse(paths, **kwargs))
+        return DO._sync(DO.A_browse(**kwargs))
 
     @staticmethod
-    async def A_new(config: dict[str, Any]) -> SuperDoer:
+    async def A_new(model,**kwargs) -> SuperDoer:
         """Async version of New"""
-        model = config["model"]
-        runtime = Runtime(**config["runtime"]) if "runtime" in config else None
-        return SuperDoer(_model=model, _runtime=runtime, _name=config["name"], _purpose=config["purpose"])
+
+        if "name" not in kwargs:
+            raise ValueError("name is required")
+        if "purpose" not in kwargs:
+            raise ValueError("purpose is required")
+       
+       
+        return SuperDoer(_model=model, _name=kwargs["name"], _purpose=kwargs["purpose"])
 
     @staticmethod
-    def New(config: dict[str, Any]) -> SuperDoer:
+    def New(model: Model, **kwargs) -> SuperDoer:
         """Create a new SuperDoer instance for task execution.
 
         Args:
@@ -119,4 +92,4 @@ Please use the async methods (A_browse, A_new) instead.""",
         Returns:
             SuperDoer instance
         """
-        return DO._sync(DO.A_new(config))
+        return DO._sync(DO.A_new(model, **kwargs))

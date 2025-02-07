@@ -3,6 +3,7 @@ from typing import Optional
 from smolagents.tools import Tool
 from donew.new.doers import BaseDoer
 from opentelemetry import trace
+from donew.new.assistants import Provision
 
 from donew.utils import is_pydantic_model, parse_to_pydantic
 
@@ -10,7 +11,7 @@ STATE = {}
 
 
 
-class NewTool(Tool):
+class NewAssistant(Provision):
     name = "new"
     description = """"""
     inputs = {

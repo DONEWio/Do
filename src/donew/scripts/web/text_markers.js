@@ -93,53 +93,32 @@
         return [...new Set(texts)].join(' ');
     }
 
-    // Store original display values and hide interactive elements
+    // Store original display values and tag interactive elements
     for (const [id, metadata] of Object.entries(elements)) {
         if (metadata.is_interactive) {
             const elem = document.querySelector(`[data-dosee-element-id='${id}']`);
-            if (elem) {
-                // Create placeholder text
-                let type = metadata.element_type;
-                let subtype = elem.getAttribute('type') || '';
-                let elementText = '';
-                let urlText = '';
-
-                // Extract text based on element type
-                elementText = extractElementText(elem);
-                if (elementText) {
-                    elementText = `(${elementText})`;
-                }
-
-                // Add URL for links
-                if (type === 'link') {
-                    const href = elem.getAttribute('href');
-                    if (href) {
-                        try {
-                            new URL(href);
-                            urlText = ` -> ${href}`;
-                        } catch {
-                            if (href.startsWith('/')) {
-                                urlText = ` -> ${href}`;
-                            } else {
-                                urlText = ` -> /${href}`;
-                            }
-                        }
+            if (elem && window.getComputedStyle(elem).display !== 'none') {  // only process visible elements
+                if (['INPUT', 'TEXTAREA'].includes(elem.tagName)) {
+                    // Store the original value for restoration
+                    elem.dataset.originalValue = elem.value;
+                    let elementText = elem.value.trim();
+                    if (!elementText) {
+                        elementText = extractElementText(elem);
                     }
+                    let marker = `@${id}${elementText ? ' - ' + elementText : ''}`;
+                    // Set the element's value to the marker
+                    elem.value = marker;
+                } else {
+                    // Store the original content for later restoration
+                    elem.dataset.originalContent = elem.innerHTML;
+                    let elementText = elem.innerText.trim().replace(/\s+/g, ' ');
+                    if (!elementText) {
+                        elementText = extractElementText(elem);
+                    }
+                    let marker = `@${id}${elementText ? ' - ' + elementText : ''}`;
+                    // Replace the element's text content with the marker
+                    elem.textContent = marker;
                 }
-
-                let placeholder = document.createElement('span');
-                placeholder.textContent = ` [${id}@${type}${subtype ? '#' + subtype : ''}${elementText}${urlText}] `;
-
-                // Store original element info
-                placeholders.push({
-                    element: elem,
-                    placeholder: placeholder,
-                    originalDisplay: elem.style.display
-                });
-
-                // Hide original and insert placeholder
-                elem.style.display = 'none';
-                elem.parentNode.insertBefore(placeholder, elem);
             }
         }
     }
