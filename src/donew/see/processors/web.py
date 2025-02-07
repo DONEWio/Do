@@ -93,8 +93,9 @@ class WebPage(BaseTarget):
     _page: Optional[Page] = None
     _headless: bool = True
     _annotation_enabled: bool = False
+    _channel: str = "chromium"
 
-    async def process(self, url: str) -> "WebPage":
+    async def process(self, url: Optional[str] = None) -> "WebPage":
         """Process a webpage and extract its elements.
 
         **Inputs**
@@ -108,7 +109,7 @@ class WebPage(BaseTarget):
         if not self._page:
             raise ValueError("No page object available")
 
-        if not self._headless:
+        if not self._headless and self._channel == "chromium":
             import warnings
 
             warnings.warn(
@@ -146,7 +147,7 @@ class WebPage(BaseTarget):
 
             # Re-enable annotations if needed
             if self._annotation_enabled:
-                await self.toggle_annotation(True)
+                await self.annotation(True)
 
         # Listen for navigation events
         self._page.on("domcontentloaded", lambda _: asyncio.create_task(handle_navigation()))
@@ -158,6 +159,10 @@ class WebPage(BaseTarget):
             await route.fulfill(response=response)
 
         await self._page.route(r"^(?!chrome-extension:).*", handle_route)
+
+        # If no url do nothing for navigation
+        if not url:
+            return self
 
         # Initial navigation with error handling
         try:
@@ -464,7 +469,7 @@ class WebPage(BaseTarget):
         }"""
         )
 
-    async def toggle_annotation(self, enabled: bool = True) -> None:
+    async def annotation(self, enabled: bool = True) -> None:
         """Toggle visual annotation of elements on the page.
 
         **Inputs**
@@ -562,6 +567,7 @@ class WebBrowser(BaseTarget):
     _browser: Optional[Browser] = None
     _pages: List[WebPage] = field(default_factory=list)
     _headless: bool = True
+    _channel: str = "chromium"
     _interaction_history: List[Tuple[int, int]] = field(
         default_factory=list
     )  # (page_index, interaction_index)
@@ -575,16 +581,16 @@ class WebBrowser(BaseTarget):
         return self._pages[-1]
 
     @public(order=1)
-    def navigate(self, url: str):
-        """Navigate to a URL in a new page.
+    def goto(self, url: str):
+        """Goto to a URL in a new page.
 
         Args:
             url (str): The URL to navigate to.
         """
-        return self._sync(self.a_navigate(url))
+        return self._sync(self.a_goto(url))
 
-    async def a_navigate(self, url: str):
-        """Navigate to a URL in a new page.
+    async def a_goto(self, url: str):
+        """Goto to a URL in a new page.
 
         Args:
             url (str): The URL to navigate to.
@@ -598,28 +604,29 @@ class WebBrowser(BaseTarget):
             _page=pw_page,
             _annotation_enabled=current_page._annotation_enabled,
             _headless=self._headless,
+            _channel=self._channel,
         )
         await new_page.process(url)
         self._pages.append(new_page)
 
     @public(order=2)
-    @documentation(extends=WebPage.toggle_annotation)
-    def toggle_annotation(self, enabled: bool = True) -> None:
-        """Toggle visual annotation of elements on the current page.
+    @documentation(extends=WebPage.annotation)
+    def annotation(self, enabled: bool = True) -> None:
+        """Control visual annotation of elements on the current page.
 
         Args:
             enabled: Whether to enable or disable annotation
         """
-        return self._sync(self.a_toggle_annotation(enabled))
+        return self._sync(self.a_annotation(enabled))
 
-    async def a_toggle_annotation(self, enabled: bool = True) -> None:
-        """Toggle visual annotation of elements on the current page.
+    async def a_annotation(self, enabled: bool = True) -> None:
+        """Control visual annotation of elements on the current page.
 
         Args:
             enabled: Whether to enable or disable annotation
         """
         if self._pages:
-            await self._current_page().toggle_annotation(enabled)
+            await self._current_page().annotation(enabled)
 
     @public(order=3)
     @documentation(extends=WebPage.cookies)
@@ -863,30 +870,26 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
             )
         return browser
 
-    async def a_process(self, source: Union[str, Page]) -> List[BaseTarget]:
+    async def a_process(self) -> WebBrowser:
         """Async version of process.
-
-        Args:
-            source: The URL to process or an existing Page object.
-
         Returns:
-            List[BaseTarget]: A list containing the WebBrowser instance.
+            WebBrowser: A WebBrowser instance.
         """
         # Initialize Playwright and browser
         browser = await self._launch_browser()
         pw_page = await browser.new_page()
         web_page = WebPage(
-            _page=pw_page, _headless=self._kwargs["headless"], _annotation_enabled=False
+            _page=pw_page, _headless=self._kwargs["headless"], _channel=self._kwargs["channel"],  _annotation_enabled=False
         )
-        await web_page.process(source)
+        await web_page.process()
 
         web_browser = WebBrowser(
             _browser=browser, _pages=[web_page], _headless=self._kwargs["headless"]
         )
 
-        return [web_browser]
+        return web_browser
 
-    def process(self, source: Union[str, Page]) -> List[BaseTarget]:
+    def process(self) -> WebBrowser:
         """Sync version of process.
 
         Args:
@@ -895,4 +898,4 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
         Returns:
             List[BaseTarget]: A list containing the WebBrowser instance.
         """
-        return self._sync(self.a_process(source))
+        return self._sync(self.a_process())
