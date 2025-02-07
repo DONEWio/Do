@@ -3,9 +3,40 @@ import time
 import os                   # added for checking local cookie jar file
 import requests
 from requests.cookies import RequestsCookieJar  # added for cookie jar support
+from donew.new.assistants import Provision
 
-class NewMCPTask():
+
+#TODO [x] make this a tool
+#TODO [x] add class variables
+#TODO [ ] infer and add class variable types
+#TODO [ ] Fetch Task name and purpose dynamically from MCP.Run
+#TODO [ ] Implement Provision aka Tool interface like it should be
+#TODO [ ] Return type of forward should be string.
+#TODO [ ] Adjust tests so it really works like a Provision
+
+class NewMCPRunTask(Provision):
+    name = "mcp_run_task"
+    description = """
+    This tool is used to run tasks on the MCP.Run platform.
+    """
+    inputs = {
+        "task": {
+            "type": "string",
+            "description": "The task to run on the MCP.Run platform."
+        }
+    }
+    output_type = "any"
+    _headers = None
+    _cookies = None
+    _cookiejar = None
+    _presigned_url = None
+    _payload = None
+    _result_url = None
+    
+    
+
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._headers = kwargs.get("headers", {"Content-Type": "application/json"})
         # Get cookies as a dict (if provided)
         self._cookies = kwargs.get("cookies")

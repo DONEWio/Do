@@ -1,6 +1,6 @@
 import os
 import pytest
-from donew.new.assistants.mcp_task import NewMCPTask
+from donew.new.assistants.mcp_task import NewMCPRunTask
 import json
 from requests.cookies import RequestsCookieJar
 import requests
@@ -12,7 +12,7 @@ def test_mcp_task():
     Test the MCP task by fetching a URL and checking the result.
     """
     
-    task_obj = NewMCPTask(name="URL Fetch", description="Fetch a URL", inputs={"url": "https://unrealists.com"}, output_type="string", presigned_url=presigned_url)
+    task_obj = NewMCPRunTask(name="URL Fetch", description="Fetch a URL", inputs={"url": "https://unrealists.com"}, output_type="string", presigned_url=presigned_url)
     task_obj.login()
     task_obj.run({"url": "https://unrealists.com"})
     result = task_obj.result()
@@ -68,7 +68,7 @@ def test_login_without_cookiejar(monkeypatch):
     monkeypatch.setattr(requests, "get", fake_get)
 
     # Create instance without providing a cookie jar (store_cookie defaults to False)
-    task_obj = NewMCPTask(presigned_url=presigned_url)
+    task_obj = NewMCPRunTask(presigned_url=presigned_url)
     poll_response = task_obj.login()
 
     assert poll_response.get("status") == "ok"
@@ -85,7 +85,7 @@ def test_login_with_cookiejar_store(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
 
     # Create instance with store_cookie enabled.
-    task_obj = NewMCPTask(presigned_url=presigned_url, store_cookie=True)
+    task_obj = NewMCPRunTask(presigned_url=presigned_url, store_cookie=True)
     poll_response = task_obj.login()
 
     assert poll_response.get("status") == "ok"
@@ -101,7 +101,7 @@ def test_login_with_cookiejar_store(monkeypatch, tmp_path):
 
 def test_retrieve_results_without_login():
     # Create instance without calling login so that cookie jar remains empty.
-    task_obj = NewMCPTask(presigned_url=presigned_url)
+    task_obj = NewMCPRunTask(presigned_url=presigned_url)
     result_message, run_data, status_code = task_obj.result("http://fake_result_url")
 
     assert result_message == "Not logged in. Please login first."
@@ -113,7 +113,7 @@ def test_run_task_and_retrieve_results_with_login(monkeypatch):
     monkeypatch.setattr(requests, "get", fake_get)
 
     # Create instance and simulate prior login by manually setting the session cookie.
-    task_obj = NewMCPTask(presigned_url=presigned_url)
+    task_obj = NewMCPRunTask(presigned_url=presigned_url)
     task_obj._cookiejar.set("sessionId", "fake_session", domain="www.mcp.run", path="/")
 
     # Test run_task: it should return a response containing a result URL.
@@ -137,7 +137,7 @@ def test_real_login_without_existing_cookiejar():
     if os.environ.get("RUN_INTEGRATION", "false").lower() != "true":
         pytest.skip("Skipping real integration tests. Set RUN_INTEGRATION=true to run.")
 
-    task_obj = NewMCPTask(presigned_url=presigned_url)
+    task_obj = NewMCPRunTask(presigned_url=presigned_url)
     poll_response = task_obj.login()
     assert poll_response.get("status") == "ok"
     session_cookie_exists = any(cookie.name == "sessionId" for cookie in task_obj._cookiejar)
@@ -164,7 +164,7 @@ def test_real_login_with_existing_cookiejar(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
 
     # Instantiate the task; the constructor should load the existing cookiejar.json.
-    task_obj = NewMCPTask(presigned_url=presigned_url)
+    task_obj = NewMCPRunTask(presigned_url=presigned_url)
 
     # Before login, verify that the cookie jar has the dummy "old_session"
     init_cookies = requests.utils.dict_from_cookiejar(task_obj._cookiejar)
