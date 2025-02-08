@@ -8,7 +8,7 @@ Description of your package.
 __version__ = "0.1.5"  # Remember to update this when bumping version in pyproject.toml
 
 from typing import Literal, Optional, Sequence, Union, cast, Any
-from donew.new.types import Model
+from donew.new import Model
 from donew.see.processors import BaseTarget, KeyValueSection, TableSection
 from donew.see.processors.web import WebBrowser, WebProcessor
 from donew.new.doers.super import SuperDoer

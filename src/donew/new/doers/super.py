@@ -14,25 +14,25 @@ from donew.utils import (
 from donew.new.assistants.browse import BrowseAssistant
 from donew.new.assistants.new import NewAssistant
 from smolagents.tools import Tool
-
+from pydantic import BaseModel
 
 CODE_SYSTEM_PROMPT = """You are an expert assistant named "{name}" with purpose "{purpose}". you can solve any task using code blobs. You will be given a task to solve as best you can.
-To do so, you have been given access to a list of tools: these tools are basically Python functions which you can call with code.
+To do so, you have been given access to a list of python functions: these functions are basically Python functions which you can call with code.
 To solve the task, you must plan forward to proceed in a series of steps, in a cycle of 'Thought:', 'Code:', and 'Observation:' sequences.
 
-At each step, in the 'Thought:' sequence, you should first explain your reasoning towards solving the task and the tools that you want to use.
+At each step, in the 'Thought:' sequence, you should first explain your reasoning towards solving the task and the functions that you want to use.
 Then in the 'Code:' sequence, you should write the code in simple Python. The code sequence must end with '<end_code>' sequence.
 During each intermediate step, you can use 'print()' to save whatever important information you will then need.
 These print outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
-In the end you have to return a final answer using the `final_answer` tool.
+In the end you have to return a final answer using the `final_answer` function.
 
 
 
-Here are a few examples using notional tools:
+Here are a few examples using notional python functions:
 ---
 Task: "Generate an image of the oldest person in this document."
 
-Thought: I will proceed step by step and use the following tools: `document_qa` to find the oldest person in the document, then `image_generator` to generate an image according to the answer.
+Thought: I will proceed step by step and use the following functions: `document_qa` to find the oldest person in the document, then `image_generator` to generate an image according to the answer.
 Code:
 ```py
 answer = document_qa(document=document, question="Who is the oldest person mentioned?")
@@ -51,7 +51,7 @@ final_answer(image)
 ---
 Task: "What is the result of the following operation: 5 + 3 + 1294.678?"
 
-Thought: I will use python code to compute the result of the operation and then return the final answer using the `final_answer` tool
+Thought: I will use python code to compute the result of the operation and then return the final answer using the `final_answer` function
 Code:
 ```py
 result = 5 + 3 + 1294.678
@@ -64,7 +64,7 @@ Task:
 You have been provided with these additional arguments, that you can access using the keys as variables in your python code:
 {{'question': 'Quel est l'animal sur l'image?', 'image': 'path/to/image.jpg'\}}"
 
-Thought: I will use the following tools: `translator` to translate the question into English and then `image_qa` to answer the question on the input image.
+Thought: I will use the following functions: `translator` to translate the question into English and then `image_qa` to answer the question on the input image.
 Code:
 ```py
 translated_question = translator(question=question, src_lang="French", tgt_lang="English")
@@ -124,7 +124,7 @@ final_answer("diminished")
 ---
 Task: "Which city has the highest population: Guangzhou or Shanghai?"
 
-Thought: I need to get the populations for both cities and compare them: I will use the tool `search` to get the population of both cities.
+Thought: I need to get the populations for both cities and compare them: I will use the function `search` to get the population of both cities.
 Code:
 ```py
 for city in ["Guangzhou", "Shanghai"]:
@@ -143,7 +143,7 @@ final_answer("Shanghai")
 ---
 Task: "What is the current age of the pope, raised to the power 0.36?"
 
-Thought: I will use the tool `wiki` to get the age of the pope, and confirm that with a web search.
+Thought: I will use the function `wiki` to get the age of the pope, and confirm that with a web search.
 Code:
 ```py
 pope_age_wiki = wiki(query="current pope age")
@@ -161,9 +161,11 @@ pope_current_age = 88 ** 0.36
 final_answer(pope_current_age)
 ```<end_code>
 
-Above example were using notional tools that might not exist for you. On top of performing computations in the Python code snippets that you create, you only have access to these tools:
+Above example were using notional functions that might not exist for you. On top of performing computations in the Python code snippets that you create, you only have access to these functions:
 
 {tool_descriptions}
+
+!! PLEASE REMEMBER THAT THE INPUT SCHEMA OF THE FUNCTIONS ARE NOT ALWAYS THE SAME. YOU MUST BE AWARE OF THE INPUT SCHEMA OF THE FUNCTIONS. ADHERE TO THE INPUT SCHEMA OF THE FUNCTIONS.!!
 
 {managed_agents_descriptions}
 
@@ -171,10 +173,10 @@ Here are the rules you should always follow to solve your task:
 0. Do not naively TRUST YOUR INSTINCTS. USE CODE TO VERIFY YOUR THOUGHTS. You see things through the lens of tokenizer. Real world must also manifest itself in your code.!!!!
 1. Always provide a 'Thought:' sequence, and a 'Code:\n```py' sequence ending with '```<end_code>' sequence, else you will fail.
 2. Use only variables that you have defined!
-3. Always use the right arguments for the tools. DO NOT pass the arguments as a dict as in 'answer = wiki({{'query': "What is the place where James Bond lives?"}})', but use the arguments directly as in 'answer = wiki(query="What is the place where James Bond lives?")'.
-4. Take care to not chain too many sequential tool calls in the same code block, especially when the output format is unpredictable. For instance, a call to search has an unpredictable return format, so do not have another tool call that depends on its output in the same block: rather output results with print() to use them in the next block.
-5. Call a tool only when needed, and never re-do a tool call that you previously did with the exact same parameters.
-6. Don't name any new variable with the same name as a tool: for instance don't name a variable 'final_answer'.
+3. Always use the right arguments for the functions. DO NOT pass the arguments as a dict as in 'answer = wiki({{'query': "What is the place where James Bond lives?"}})', but use the arguments directly as in 'answer = wiki(query="What is the place where James Bond lives?")'.
+4. Take care to not chain too many sequential function calls in the same code block, especially when the output format is unpredictable. For instance, a call to search has an unpredictable return format, so do not have another function call that depends on its output in the same block: rather output results with print() to use them in the next block.
+5. Call a function only when needed, and never re-do a function call that you previously did with the exact same parameters.
+6. Don't name any new variable with the same name as a function: for instance don't name a variable 'final_answer'.
 7. Never create any notional variables in our code, as having these in your logs will derail you from the true variables.
 8. You can use imports in your code, but only from the following list of modules: {authorized_imports}
 9. The state persists between code executions: so if in one step you've created variables or imported modules, these will all persist.
@@ -190,20 +192,20 @@ CONSTRAINTS_PROMPT_PRE = """DISCLAIMER, a constraint has been expected. you can 
 """
 
 PYDANTIC_CONSTRAINTS_PROMPT_POST = """
-!! PLEASE REMEMBER THAT CONSTRAINTS ARE A PYTHON DICTIONARY. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as signle input to final_answer tool!!
+!! PLEASE REMEMBER THAT CONSTRAINTS ARE A PYTHON DICTIONARY. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as signle input to final_answer function!!
 
-you must call subsequent tool calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
 IMPORTANT:
-- a tool call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
-- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE TOOL CALLS KNOWS WHAT TO RETURN.
-- for example if we need a bio or receipve stated in final_answer tool, you must rephrase the requirements in a way that the tool call knows what to return.
-- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer tools requirements.
-- you will do the formatting at the end of the day but it is your responsibility to ensure tool calls knows what to return.
-- not every tool can provide such data so be mindful of that.
-- for example browser tool returning limited data wont do good to you. so you must let the tool expect the natural language output.
-- at the end of the day you must provide the answer in the format of the input constraints. using final_answer tool with combination of results from the tool calls.
-- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer tool.
-- FINAL_ANSWER TOOL MUST BE THE LAST TOOL CALL. AND ITS INPUT MUST BE ADHERENT TO ITS INPUT SCHEMA. THIS IS CRITICAL.!!
+- a function call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
+- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
+- for example if we need a bio or receipve stated in final_answer function, you must rephrase the requirements in a way that the function call knows what to return.
+- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer functions requirements.
+- you will do the formatting at the end of the day but it is your responsibility to ensure functions knows what to return.
+- not every function can provide such data so be mindful of that.
+- for example browser function returning limited data wont do good to you. so you must let the function expect the natural language output.
+- at the end of the day you must provide the answer in the format of the input constraints. using final_answer function with combination of results from the function calls.
+- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer function.
+- FINAL_ANSWER FUNCTION MUST BE THE LAST FUNCTION CALL. AND ITS INPUT MUST BE ADHERENT TO ITS INPUT SCHEMA. THIS IS CRITICAL.!!
 
 YOU CAN DO IT! I TRUST YOU!
 """
@@ -212,21 +214,21 @@ JSON_CONSTRAINTS_PROMPT_POST = """
 
 - constraints accepts dict, list or string as json compliant. 
 
-!! PLEASE REMEMBER THAT CONSTRAINTS ARE A JSON COMPLIANT. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as SINGLE INPUT to final_answer tool!!
+!! PLEASE REMEMBER THAT CONSTRAINTS ARE A JSON COMPLIANT. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as SINGLE INPUT to final_answer function!!
 
 
-you must call subsequent tool calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
 IMPORTANT:
-- a tool call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
-- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE TOOL CALLS KNOWS WHAT TO RETURN.
-- for example if we need a bio or receipve stated in final_answer tool, you must rephrase the requirements in a way that the tool call knows what to return.
-- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer tools requirements.
-- you will do the formatting at the end of the day but it is your responsibility to ensure tool calls knows what to return.
-- not every tool can provide such data so be mindful of that.
-- for example browser tool returning limited data wont do good to you. so you must let the tool expect the natural language output.
-- at the end of the day you must provide the answer in the format of the input constraints. using final_answer tool with combination of results from the tool calls.
-- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer tool.
-- FINAL_ANSWER TOOL MUST BE THE LAST TOOL CALL. AND ITS INPUT MUST BE ADHERENT TO ITS INPUT SCHEMA. THIS IS CRITICAL.!!
+- a function call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
+- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
+- for example if we need a bio or receipve stated in final_answer function, you must rephrase the requirements in a way that the function call knows what to return.
+- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer functions requirements.
+- you will do the formatting at the end of the day but it is your responsibility to ensure functions knows what to return.
+- not every function can provide such data so be mindful of that.
+- for example browser function returning limited data wont do good to you. so you must let the function expect the natural language output.
+- at the end of the day you must provide the answer in the format of the input constraints. using final_answer function with combination of results from the function calls.
+- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer function.
+- FINAL_ANSWER FUNCTION MUST BE THE LAST FUNCTION CALL. AND ITS INPUT MUST BE ADHERENT TO ITS INPUT SCHEMA. THIS IS CRITICAL.!!
 
 
 
@@ -236,20 +238,34 @@ YOU CAN DO IT! I TRUST YOU!
 
 
 STR_CONSTRAINTS_PROMPT_POST = """
-you must call subsequent tool calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+you must call subsequent function calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
 IMPORTANT:
-- a tool call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
-- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE TOOL CALLS KNOWS WHAT TO RETURN.
-- for example if we need a bio or receipt stated in final_answer tool, you must rephrase the requirements in a way that the tool call knows what to return.
-- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer tools requirements.
-- you will do the formatting at the end of the day but it is your responsibility to ensure tool calls knows what to return.
-- not every tool can provide such data so be mindful of that.
-- for example browser tool returning limited data wont do good to you. so you must let the tool expect the natural language output.
-- at the end of the day you must provide the answer in the format of the input constraints. using final_answer tool with combination of results from the tool calls.
-- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer tool.
+- a function call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
+- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
+- for example if we need a bio or receipt stated in final_answer function, you must rephrase the requirements in a way that the function call knows what to return.
+- task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer functions requirements.
+- you will do the formatting at the end of the day but it is your responsibility to ensure functions knows what to return.
+- not every function can provide such data so be mindful of that.
+- for example browser function returning limited data wont do good to you. so you must let the function expect the natural language output.
+- at the end of the day you must provide the answer in the format of the input constraints. using final_answer function with combination of results from the function calls.
+- ALSO DO NOT WRAP RESULT in answer field. such as  {"answer": result} instead just pass result as input to final_answer function.
 YOU CAN DO IT! I TRUST YOU!
 """
 
+
+
+def get_task_from_constraints(task: str, constraints: str|BaseModel|dict[str, Any]) -> str:
+    if constraints:
+        if is_pydantic_model(constraints):
+            constraints_schema = pydantic_model_to_simple_schema(constraints)
+            task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{PYDANTIC_CONSTRAINTS_PROMPT_POST}\n---\n"
+        elif isinstance(constraints, dict):
+            constraints_schema = json.dumps(constraints, indent=2)
+            task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{JSON_CONSTRAINTS_PROMPT_POST}\n---\n"
+        else:
+            constraints_schema = str(constraints)
+            task = task + f"\n\n---\n{CONSTRAINTS_PROMPT_PRE}{constraints_schema}{STR_CONSTRAINTS_PROMPT_POST}\n---\n"
+    return task
 
 class ValidationError(Exception):
     """Raised when answer validation fails"""
@@ -355,8 +371,10 @@ class SuperDoer(BaseDoer):
             for provision in self._provisions:
                 if isinstance(provision, WebBrowser):
                     base_tools.append(BrowseAssistant(model=self.model,browser=provision))
-                if isinstance(provision, SuperDoer):
+                elif isinstance(provision, SuperDoer):
                     base_tools.append(NewAssistant(superdoer=provision))
+                elif isinstance(provision, Provision):  # this condition now covers any instance that extends Provision
+                    base_tools.append(provision)
 
             system_prompt = CODE_SYSTEM_PROMPT.format(
                 name=self._name,
@@ -372,6 +390,7 @@ class SuperDoer(BaseDoer):
                 model=self.model,
                 add_base_tools=False,
                 system_prompt=system_prompt,
+                max_steps=10,
             )
 
             final_answer_tool = FinalAnswerTool(

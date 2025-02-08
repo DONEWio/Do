@@ -3,8 +3,8 @@ from smolagents import CodeAgent
 from smolagents.tools import Tool
 from donew.new.assistants import Provision
 from donew.new.runtimes.local import LocalPythonInterpreter
-from donew.new.types import Model
-from donew.see.processors.web import WebBrowser, WebProcessor
+from donew.new import Model
+from donew.see.processors.web import WebBrowser
 from opentelemetry import trace
 
 STATE = {}

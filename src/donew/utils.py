@@ -86,10 +86,17 @@ def enable_tracing():
     # Start phoenix server in background if not already running
     try:
         process = subprocess.Popen(
-            [sys.executable, "-m", "phoenix.server.main", "serve"],
+            ["phoenix", "serve"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            text=True
         )
+        import select
+        # Wait up to 0.5 seconds for any output from stdout and print it if available
+        rlist, _, _ = select.select([process.stdout], [], [], 3)
+        if rlist:
+            output_line = process.stdout.readline()
+            print(output_line, end='')
         # Store the process for later cleanup
         enable_tracing._server_process = process
         print("📡 Started Phoenix server")

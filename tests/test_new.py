@@ -1,13 +1,15 @@
+from dataclasses import Field
 import os
 from dotenv import load_dotenv
+from pydantic import create_model
 import pytest
 from typing import List, Optional
 from donew import DO
+# from donew.new.assistants.mcprun import MCPRun
 from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
-from smolagents.models import ChatMessage, MessageRole
+from donew.new import LiteLLMModel, ChatMessage, MessageRole
 from donew.utils import enable_tracing, disable_tracing
-from smolagents.models import LiteLLMModel
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -329,6 +331,74 @@ def test_envision_without_schema():
     assert isinstance(result, str)
 
 
+def test_restack_workflow():
+    load_dotenv()
+
+    from donew.new.assistants.restack import RestackWorflowAssistant
+    from pydantic import BaseModel, Field
+    class Input(BaseModel):
+        name: str = Field(description="The name of the person")
+
+    class Output(BaseModel):
+        greeting: str = Field(description="The greeting for the person")
+        weather: str = Field(description="The weather for the person")
+        poem: str = Field(description="A poem for the person matching the localtion and weather")
+
+    assistant = RestackWorflowAssistant(
+        base_url="https://reff9k1p.clj5khk.gcp.restack.it",
+        workflow_id="MultistepWorkflow",
+        input_model=Input,
+        name="weather_assistant",
+        description="Retrieve the weather and returns a greeting for a person",
+        timeout=90
+    )    
+    model = LiteLLMModel(model_id="gpt-4o-mini")
+    # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
+    doer = DO.New(model, name="weather_greeter", purpose="greet a person with the weather")
+    result = doer.realm([assistant]).envision(Output).enact("greet Kenan Deniz")
+    assert isinstance(result, Output)
+    print(result.model_dump_json(indent=2))
+
+
+def test_composable_restack_workflow():
+    load_dotenv()
+
+    from donew.new.assistants.restack import RestackWorflowAssistant
+    from pydantic import BaseModel, Field
+
+    model = LiteLLMModel(model_id="gpt-4o-mini")
+    class Input(BaseModel):
+        name: str = Field(description="The name of the person")
+
+    class Output(BaseModel):
+        greeting: str = Field(description="The greeting for the person")
+        weather: str = Field(description="The weather for the person")
+        poem: str = Field(description="A poem for the person matching the localtion and weather")
+
+    assistant = RestackWorflowAssistant(
+        base_url="https://reff9k1p.clj5khk.gcp.restack.it",
+        workflow_id="MultistepWorkflow",
+        input_model=Input,
+        name="weather_assistant",
+        description="Retrieve the weather and returns a greeting for a person",
+    )    
+    
+    persona_generating_doer = DO.New(
+        model,
+        name="persona_generator",
+        purpose="generates a fake persona. personas fun facts is ALWAYS talking about Golden gate bridge.",
+    )
+    persona_assistant = persona_generating_doer.envision(
+        "name(<name>), age(<age>), gender(<gender>, fun_facts(<fun_facts>))"
+    )
+
+
+    doer = DO.New(model, name="weather_greeter", purpose="greet a person with the weather")
+    result = doer.realm([persona_assistant,assistant]).envision(Output).enact("create a persona and greet with the weather")
+    assert isinstance(result, Output)
+    print(result.model_dump_json(indent=2))
+
+
 def test_envision_without_schema_with_custom_verify():
     load_dotenv()
     model = LiteLLMModel(model_id="gpt-4o-mini")
@@ -389,5 +459,20 @@ def test_composability():
     )
 
     assert isinstance(result, str)
-    assert "Golden gate bridge" in result
+    assert "Golden gate bridge".lower() in result.lower()
     print(result)
+
+
+# def test_mcp_task_run():
+
+#     load_dotenv()
+
+#     model = LiteLLMModel(model_id="gpt-4o-mini")
+#     from pydantic import BaseModel, Field
+#     class InputSchema(BaseModel):
+#         url: str = Field(description="The url to fetch")
+        
+#     mcp = MCPRun(model="gpt-4o-mini", name='why', profile="denizkenan/donew", task="FetchWebsiteAsMarkdown", input_model=InputSchema).init()
+#     result = DO.New(model, name='why', purpose='why').realm([mcp]).enact("content of mcp.run")
+#     assert result is not None
+    

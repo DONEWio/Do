@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
+from typing import Any, Callable, List, Optional, TypeVar
 from dataclasses import dataclass, field
 
 from donew.new.assistants import Provision
-from donew.new.types import Model
+from donew.new import Model
 
 
 
