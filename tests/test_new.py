@@ -5,7 +5,7 @@ from pydantic import create_model
 import pytest
 from typing import List, Optional
 from donew import DO
-# from donew.new.assistants.mcprun import MCPRun
+from donew.new.assistants.mcprun import MCPRun
 from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
 from donew.new import LiteLLMModel, ChatMessage, MessageRole
@@ -463,16 +463,16 @@ def test_composability():
     print(result)
 
 
-# def test_mcp_task_run():
+def test_mcp_task_run():
 
-#     load_dotenv()
+    load_dotenv()
 
-#     model = LiteLLMModel(model_id="gpt-4o-mini")
-#     from pydantic import BaseModel, Field
-#     class InputSchema(BaseModel):
-#         url: str = Field(description="The url to fetch")
+    model = LiteLLMModel(model_id="gpt-4o-mini")
+    from pydantic import BaseModel, Field
+    class InputSchema(BaseModel):
+        url: str = Field(description="The url to fetch")
         
-#     mcp = MCPRun(model="gpt-4o-mini", name='why', profile="denizkenan/donew", task="FetchWebsiteAsMarkdown", input_model=InputSchema).init()
-#     result = DO.New(model, name='why', purpose='why').realm([mcp]).enact("content of mcp.run")
-#     assert result is not None
+    mcp = MCPRun(model="gpt-4o-mini", name='why', profile="denizkenan/donew", task="FetchWebsiteAsMarkdown", input_model=InputSchema).init()
+    result = DO.New(model, name='why', purpose='why').realm([mcp]).enact("content of mcp.run")
+    assert result is not None
     
