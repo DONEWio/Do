@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, List, Optional, TypeVar
 from dataclasses import dataclass, field
 
-from donew.new.assistants import Provision
+from donew.new.realm.provisions import Provision
 from donew.new import Model
 
 

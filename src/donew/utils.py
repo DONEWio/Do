@@ -156,6 +156,9 @@ def parse_to_pydantic(data, schema):
         return schema.model_validate(data)
     return data
 
+
+
+
 def pydantic_model_to_simple_schema(
         model_or_schema: BaseModel | dict[str, Any],
         _processed_refs: set[str] = {}, # Circular Reference Protection
@@ -192,3 +195,7 @@ def pydantic_model_to_simple_schema(
         return result
     except Exception as e:
         raise ValueError(f"Error processing schema: {str(e)}")
+    
+
+
+

@@ -1,246 +1,232 @@
 ---
-description: project spec
-globs: *.py
+description: Onboarding document usefule for almost any task
+globs: 
 ---
-# DoNew Core PRD
+# Welcome to DoNew: Your Composable Task Library
 
-## Overview
-DoNew is a Python package designed to enable AI agents to interact with web content and documents through high-level, intuitive interfaces. The project aims to bridge the gap between AI capabilities and real-world applications by providing robust tools for web automation, document processing, and autonomous task execution.
+Hello there, engineer and smart AI buddy! Welcome to DoNew — an open, composable, isolated, and extendable task library built to empower you to create, compose, and orchestrate intelligent workflows. Whether you're integrating AI capabilities or automating complex tasks, DoNew is designed to be both intuitive and powerful.
+
+## What is DoNew?
+
+DoNew is a Python package designed to empower AI agents to interact effortlessly with web content and documents through high-level, intuitive interfaces. It bridges the gap between advanced AI capabilities and real-world applications by offering robust tools for web automation, document processing, and autonomous task execution. Developers can build isolated tasks that integrate seamlessly with their favorite tools, composing them either horizontally as peers or vertically as nested workflows to orchestrate complex operations, all while keeping each task self-contained and extendable.
+
+## Key Features
+- Task Planning & Multi-Step Operations: Organize complex workflows with clear planning and sequential execution.
+- Provision Isolation: Context is isolated from the rest of the world. Each provision is a self-contained unit during runtime.
+- Web Automation (DO.Browse): Leverage Playwright-based browser automation featuring smart element detection, visual debugging, and integrated knowledge graph extraction.
+- Knowledge Processing: Utilize multi-model entity extraction (GLiNER), relationship mapping (GLiREL), advanced text analysis with spaCy, and robust graph storage via KuzuDB.
+- Task Composition & Context Awareness: Achieve both horizontal (parallel provisions) and vertical (nested tasks) composition with comprehensive state and context management.
+- Plug-and-Play Provisions: Comes with batteries included—ready-made tools such as MCP.run tasks and Restack workflows.
+
+## Terminology
+- **Doer**: A task executor that can be enacted. instance of DO.New
+- **Provision**: A tool that can be used to enact a doer.
+- **Realm**: The context in which a doer is enacted.
+- **Envision**: The expected output of a doer.
+- **Enact**: The act that triggers a doer to start its journey.
 
 ## Goals
+0. Intuitive interface DO.New for task execution, DO.Browse for standalone web automation
 1. Provide AI-first interfaces for web and document interaction
 2. Enable autonomous decision-making and task execution
 3. Maintain high reliability and performance
 4. Ensure excellent developer experience
 5. Support both simple and complex AI agent workflows
+6. Provide batteries included provisions
+7. Hide underlying complexity from the user
 
-## Core Components
-
-### 1. DO.Browse
-#### Current Status: Released (v0.1.4)
-#### Purpose
-Enables AI agents to navigate and interact with web content autonomously.
-
-#### Key Features
-- Autonomous webpage navigation
-- Smart element detection and interaction
-- State management (cookies, storage)
-- Visual debugging tools
-- Context-aware operations
-
-#### Technical Requirements
-- Playwright integration for browser automation
-- Async/await support
-- Type safety
-- Error handling and recovery
-- Performance optimization
-
-### 2. DO.Graph (New)
-#### Status: Beta
-#### Purpose
-Provides knowledge graph capabilities for AI understanding and relationship mapping.
-
-#### Key Features
-- Named Entity Recognition using GLiNER
-- Relationship Extraction using GLiREL
-- Graph storage with KuzuDB
-- Text processing with spaCy
-- Persistent graph storage
-
-#### Technical Requirements
-- Python 3.11+ support
-- spaCy integration
-- KuzuDB backend
-- Memory-efficient processing
-- Async support
-
-### 3. DO.Read (Planned)
-#### Status: In Development
-#### Purpose
-Facilitate AI understanding and processing of documents.
-
-#### Key Features
-- PDF processing
-- Document structure analysis
-- Content extraction
-- Cross-document referencing
-- Semantic understanding
-
-#### Technical Requirements
-- PDF parsing capabilities
-- OCR integration
-- Structure recognition
-- Content indexing
-- Memory-efficient processing
-
-### 4. DO(...).New (Planned)
-#### Status: Design Phase
-#### Purpose
-Enable complex task execution and decision-making.
-
-#### Key Features
-- Task planning
-- Decision trees
-- Multi-step operations
-- Context awareness
-- State persistence
-
-#### Technical Requirements
-- Task orchestration
-- State management
-- Error recovery
-- Progress tracking
-- Performance monitoring
-
-## Technical Architecture
 
 ### Core Architecture
-- Python 3.8+ support
+- Python 3.10+ support
 - Async-first design
 - Type hints throughout
 - Modular component design
 - Extensive error handling
 
-### Dependencies
-- Playwright for web automation
-- Additional dependencies per component (PDF, OCR, etc.)
-- Minimal core dependencies
 
-### Performance Requirements
-- Sub-second response times for basic operations
-- Efficient memory usage
-- Scalable for large documents/complex tasks
-- Graceful degradation under load
+#### Technical Requirements
+- Python 3.11+ support
+- NLP integration
+    - KG extraction using spaCy and GLiNER
+- Graph database integration
+    - KuzuDB
+- Async support
 
-## API Design
 
-### Principles
-1. Intuitive interfaces
-2. Consistent patterns
-3. Comprehensive type hints
-4. Detailed documentation
-5. Predictable behavior
 
-### Interface Examples
-```python
-# Browse Interface
-browser = await DO.Browse(url)
-elements = browser.elements()
-await browser.type(element_id, text)
+## Repository File Structure
 
-# Future Read Interface
-document = await DO.Read(file_path)
-content = document.extract()
-structure = document.analyze()
+Below is a rough sketch of the DoNew repository structure to help you navigate the codebase:
 
-# Future New Interface
-task = DO(context).New(task_definition)
-await task.execute()
+```
+donew/
+├── __init__.py
+├── utils.py              # Shared utilities and helper functions
+├── envpaths.py          # Environment and configuration management
+├── new/
+│   ├── __init__.py
+│   ├── realm/
+│   │   ├── __init__.py
+│   │   └── provisions/  # Pluggable task executors
+│   │       ├── browse.py     # DO.Browse provision interface
+│   │       ├── mcprun.py     # provision MCP.run tasks
+│   │       ├── restack.py    # provision restack tasks
+│   │       ├── new.py        # Core task composition engine it binds existing donew task as provision to realm of child donew task
+│   │       └── __init__.py
+│   └── doers/          # Task execution framework
+│       ├── base.py     # Base doer definitions
+│       ├── super.py    # Enhanced doer capabilities using huggingface SmolAgents (TO BE REPLACED WITH DO.New)
+│       └── __init__.py
+├── see/                # Content understanding engine
+│   ├── processors/     # Content processing pipeline
+│   │   ├── web.py     # Web automation and interaction (Playwright-based)
+│   │   └── __init__.py
+│   └── graph/         # Knowledge extraction system
+│       └── __init__.py # Multi-model KG construction (GLiNER, GLiREL, spaCy)
+└── scripts/
+    └── web/           # Browser enhancement scripts
+        ├── element_detection.js     # Smart element detection
+        ├── text_markers.js          # Text content processing
+        ├── highlight_elements.js    # Visual debugging support
+        ├── restore_text_markers.js  # removes artifacts stemmed from text_markers.js
+        └── highlight_styles.css     # Visual styling for highlight_elements.js
+
+
 ```
 
-## Success Metrics
+This structure shows how DoNew combines web automation, knowledge extraction, and task composition into a cohesive system. The `see/` directory handles content understanding and processing, while `new/` manages task composition and execution. The `scripts/` directory provides browser-side enhancements for web automation.
 
-### Technical Metrics
-- Test coverage > 90%
-- Response time < 1s for basic operations
-- Memory usage < 500MB for standard operations
-- Error rate < 1%
 
-### User Metrics
-- Developer satisfaction
-- API usability
-- Documentation completeness
-- Community engagement
 
-## Release Strategy
+## Embracing Composability
 
-### Version 0.x
-- Core Browse functionality
-- Basic web automation
-- Essential tools for AI agents
+One of DoNew's most powerful features is its ability to compose tasks both horizontally and vertically:
 
-### Version 1.0
-- Complete Browse implementation
-- Initial Read functionality
-- Stable API
+- **Horizontal Composability:** Attach multiple independent provisions to work in parallel, each contributing to the overall task.
+- **Vertical Composability:** Use a DoNew task as a provision within another task, allowing for nested, more granular workflows.
 
-### Version 2.0
-- Full Read implementation
-- Initial New functionality
-- Enhanced AI capabilities
+A great test case to check out is `test_composability` in our test suite, which illustrates how different tasks can seamlessly integrate with each other.
 
-## Documentation Requirements
 
-### Types
-1. API Reference
-2. Tutorials
-3. Examples
-4. Best Practices
-5. Troubleshooting
 
-### Formats
-- Online documentation (nextra-based)
-- Inline code documentation
-- Jupyter notebooks
-- Video tutorials (planned)
+### 1. Creating a Task with DO.New
 
-## Testing Requirements
+Create a new task by using the `DO.New` method. This wraps your model or task executor in a way that it can be used to handle specific user requests. For example:
 
-### Unit Tests
-- Component-level testing
-- Edge case coverage
-- Performance testing
-- Type checking
+```python
+from donew import DO
 
-### Integration Tests
-- Cross-component testing
-- Real-world scenarios
-- Browser compatibility
-- Network conditions
+# Create a new task (doer) with a model
+model = LitellmModel()
+doer = DO.New(model, name='example_task', purpose='demonstrate basic usage')
+```
 
-### User Testing
-- Developer feedback
-- AI agent integration
-- Use case validation
-- Performance monitoring
+### 2. Adding Context with realm()
 
-## Security Considerations
+The `realm` method is where your task provisions (executors) live. Think of it as the context for your task. You can pass one or many provisions here:
 
-### Browser Security
-- Sandboxed execution
-- Resource limitations
-- Access controls
-- Data privacy
+```python
+# Assume browser is a provision for web tasks
+browser = DO.Browse(headless=False)
 
-### Document Security
-- Safe file handling
-- Content validation
-- Access permissions
-- Data encryption
+doer = doer.realm([browser])
+```
 
-### Task Security
-- Execution limits
-- Resource controls
-- Error containment
-- Audit logging
+This tells DoNew that the task may interact with the web or require specific tools that are available as provisions.
 
-## Future Considerations
+### 3. Enforcing Output Structure with envision()
 
-### Scalability
-- Cloud deployment
-- Distributed processing
-- Load balancing
-- Resource optimization
+Before executing your task, you can call `envision` to specify the expected output format. This step is optional but helps guide the task in delivering results that adhere to a defined schema:
 
-### AI Integration
-- LLM optimization
-- Vision model support
-- Multi-modal processing
-- Context enhancement
+```python
+from pydantic import BaseModel, Field
 
-### Community
-- Plugin system
-- Extension API
-- Community contributions
-- Use case sharing
-``` 
+class Team(BaseModel):
+    members: list[str] = Field(description='List of team members')
+
+# This enforces that the output should match the Team schema
+constrained_doer = doer.envision(Team)
+```
+
+### 4. Kickstarting the Workflow with enact()
+
+Finally, the `enact` method initiates the task. It sends the task description (and any additional context) into DoNew's orchestration engine, triggering the flow among provisions:
+
+```python
+result = constrained_doer.enact('goto https://unrealists.com and find the team')
+```
+
+This call kicks off the complete orchestration, processing the task through the defined realm and eventually returning the result in the enforced format.
+
+## How Do Provisions Work?
+
+Provisions in DoNew are essentially your task executors. They are designed to be simple Python functions that accept input and deliver output. When you attach them via the `realm`, they can operate either in parallel (horizontal composability) or can invoke additional DoNew tasks (vertical composability).
+
+For instance, you might have one provision that browses the web, another that parses content, and a third that formats the output. They can work together seamlessly to produce the final result.
+
+## A Quick Example: Browsing and Extracting Team Info
+
+Here's a snippet that showcases a typical flow:
+
+```python
+# Create a browser provision
+browser = DO.Browse(headless=False)
+model = LitellmModel(model='your-model-id')
+# Create a task executor
+doer = DO.New(model, name='example_task', purpose='demonstrate basic usage')
+
+# Configure task with realm, envision schema, and enact the task
+result = (
+    doer.realm([browser])
+        .envision(Team)
+        .enact('goto https://unrealists.com and find the team')
+)
+
+print(result.model_dump_json(indent=2))
+```
+
+This code demonstrates how you can integrate a provision for web automation, enforce an output structure, and then trigger a complex orchestration, all in a fluent and composable manner.
+
+
+### Knowledge Graph Integration
+
+The content processing in DoNew follows a well-defined flow:
+
+1. **Base Target Layer**
+   - All processors inherit from `BaseTarget`
+   - Must implement `text()` method for content extraction
+   - Provides unified interface for analysis and querying
+
+2. **Knowledge Graph Integration**
+   ```python
+   # Every processor can provide content for KG analysis
+   async def a_analyze(self, **kwargs):
+       if self._kg_analyzer is None:
+           self._kg_analyzer = KnowledgeGraph()
+       text = await self.a_text()  # Get content
+       return self._kg_analyzer.analyze(id, text, **kwargs)
+   ```
+
+### Browser Architecture DO.Browse
+
+   - `WebBrowser`: High-level API for web automation
+     * Manages navigation and state
+     * Maintains page history
+     * Provides unified interface for provisions
+   - `WebPage`: Represents single page state
+     * Handles current page interactions
+     * Implements BaseTarget for content processing
+     * Feeds into knowledge graph pipeline
+
+
+
+
+## Onboarding Next Steps
+
+If you're new to DoNew, here are a few suggestions:
+
+1. **Explore the Tests:** Take a look at `tests/test_new.py` and `tests/test_web_processor.py` for practical examples of how to use DoNew in various scenarios.
+2. **Review the API Docs:** Familiarize yourself with methods like `envision`, `realm`, and `enact` and how they interact to build complex workflows.
+3. **Experiment:** Modify example tasks or create new ones by composing different provisions. Experimentation is key to unlocking the full potential of DoNew.
+
+

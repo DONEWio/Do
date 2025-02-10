@@ -1,13 +1,13 @@
 import requests
 from opentelemetry import trace
-from donew.new.assistants import Provision
+from donew.new.realm.provisions import Provision
 from pydantic import BaseModel
 from donew.utils import parse_to_pydantic, pydantic_model_to_simple_schema
 from logging import getLogger
 
 logger = getLogger(__name__)
 
-class RestackWorflowAssistant(Provision):
+class RestackWorkflow(Provision):
     name = "restack"
     description = """"""
     base_url = ""

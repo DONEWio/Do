@@ -171,6 +171,8 @@
             elementInfo = processFormElement(element);
         } else if (element.tagName === 'IMG' || element.getAttribute('role') === 'img') {
             elementInfo = { elementType: 'image', isInteractive: false };
+        } else if (element.tagName === 'TABLE') {
+            elementInfo = { elementType: 'table', isInteractive: false };
         } else {
             elementInfo = processElementsPotentiallyClickable(element);
         }

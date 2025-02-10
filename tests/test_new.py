@@ -5,7 +5,7 @@ from pydantic import create_model
 import pytest
 from typing import List, Optional
 from donew import DO
-from donew.new.assistants.mcprun import MCPRun
+from donew.new.realm.provisions.mcprun import MCPRun
 from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
 from donew.new import LiteLLMModel, ChatMessage, MessageRole
@@ -334,7 +334,7 @@ def test_envision_without_schema():
 def test_restack_workflow():
     load_dotenv()
 
-    from donew.new.assistants.restack import RestackWorflowAssistant
+    from donew.new.realm.provisions.restack import RestackWorkflow
     from pydantic import BaseModel, Field
     class Input(BaseModel):
         name: str = Field(description="The name of the person")
@@ -344,7 +344,7 @@ def test_restack_workflow():
         weather: str = Field(description="The weather for the person")
         poem: str = Field(description="A poem for the person matching the localtion and weather")
 
-    assistant = RestackWorflowAssistant(
+    assistant = RestackWorkflow(
         base_url="https://reff9k1p.clj5khk.gcp.restack.it",
         workflow_id="MultistepWorkflow",
         input_model=Input,
@@ -360,10 +360,45 @@ def test_restack_workflow():
     print(result.model_dump_json(indent=2))
 
 
+def test_restack_workflow_with_browse():
+    load_dotenv()
+
+    from donew.new.realm.provisions.restack import RestackWorkflow
+    from pydantic import BaseModel, Field
+
+
+    class Input(BaseModel):
+        name: str = Field(description="The name of the person")
+        location: str = Field(description="The location of the person")
+
+    class Output(BaseModel):
+        name: str = Field(description="The name of the person")
+        location: str = Field(description="The location of the company person works at")
+        greeting: str = Field(description="The greeting for the person")
+        weather: str = Field(description="The weather for the person")
+        poem: str = Field(description="A poem for the person matching the localtion and weather")
+
+    assistant = RestackWorkflow(
+        base_url="http://localhost:6233",
+        workflow_id="MultistepWorkflow",
+        input_model=Input,
+        name="weather_assistant",
+        description="Retrieve the weather and returns a greeting for a person",
+        timeout=90
+    )    
+    browser = DO.Browse(headless=False)
+    model = LiteLLMModel(model_id="gpt-4o-mini")
+    # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
+    doer = DO.New(model, name="weather_greeter", purpose="greet a person with the weather")
+    result = doer.realm([assistant, browser]).envision(Output).enact("goto restack.io and find the team get the first guy and greet with the weather")
+    assert isinstance(result, Output)
+    print(result.model_dump_json(indent=2))
+
+
 def test_composable_restack_workflow():
     load_dotenv()
 
-    from donew.new.assistants.restack import RestackWorflowAssistant
+    from donew.new.realm.provisions.restack import RestackWorkflow
     from pydantic import BaseModel, Field
 
     model = LiteLLMModel(model_id="gpt-4o-mini")
@@ -375,7 +410,7 @@ def test_composable_restack_workflow():
         weather: str = Field(description="The weather for the person")
         poem: str = Field(description="A poem for the person matching the localtion and weather")
 
-    assistant = RestackWorflowAssistant(
+    assistant = RestackWorkflow(
         base_url="https://reff9k1p.clj5khk.gcp.restack.it",
         workflow_id="MultistepWorkflow",
         input_model=Input,

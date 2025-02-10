@@ -1,7 +1,7 @@
 from typing import Optional
 from smolagents import CodeAgent
 from smolagents.tools import Tool
-from donew.new.assistants import Provision
+from donew.new.realm.provisions import Provision
 from donew.new.runtimes.local import LocalPythonInterpreter
 from donew.new import Model
 from donew.see.processors.web import WebBrowser
@@ -107,7 +107,7 @@ class FinalAnswerTool(Tool):
         return answer
 
 
-class BrowseAssistant(Provision):
+class Browser(Provision):
     name = "browse"
     description = """
     This browser tool is used to browse the web. It uses local web browser and user profile is loaded safely.

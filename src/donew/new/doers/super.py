@@ -1,7 +1,7 @@
 import json
 from typing import Any, Callable, List, Optional
 from dataclasses import dataclass, replace
-from donew.new.assistants import Provision
+from donew.new.realm.provisions import Provision
 from donew.new.doers import BaseDoer
 from smolagents import CodeAgent
 from donew.new.runtimes.local import LocalPythonInterpreter
@@ -11,8 +11,8 @@ from donew.utils import (
     parse_to_pydantic,
     pydantic_model_to_simple_schema,
 )
-from donew.new.assistants.browse import BrowseAssistant
-from donew.new.assistants.new import NewAssistant
+from donew.new.realm.provisions.browse import Browser
+from donew.new.realm.provisions.new import New
 from smolagents.tools import Tool
 from pydantic import BaseModel
 
@@ -370,9 +370,9 @@ class SuperDoer(BaseDoer):
             base_tools = []
             for provision in self._provisions:
                 if isinstance(provision, WebBrowser):
-                    base_tools.append(BrowseAssistant(model=self.model,browser=provision))
+                    base_tools.append(Browser(model=self.model,browser=provision))
                 elif isinstance(provision, SuperDoer):
-                    base_tools.append(NewAssistant(superdoer=provision))
+                    base_tools.append(New(superdoer=provision))
                 elif isinstance(provision, Provision):  # this condition now covers any instance that extends Provision
                     base_tools.append(provision)
 

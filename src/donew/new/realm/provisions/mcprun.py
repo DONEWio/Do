@@ -4,8 +4,10 @@ import os
 import requests
 from requests.cookies import RequestsCookieJar
 from opentelemetry import trace
-from donew.new.assistants import Provision
+from donew.new.realm.provisions import Provision
 from pydantic import BaseModel
+from donew.envpaths import get_data_path_for
+
 
 from donew.utils import pydantic_model_to_simple_schema
 
@@ -20,13 +22,32 @@ class MCPRun(Provision):
     }
     input_model: BaseModel
     output_type = "any"
+    mcprun_task = None
+    mcprun_login_timeout = 60
+    mcprun_run_timeout = 60
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.model = kwargs.get("model", None)
+        self.cookies = RequestsCookieJar()
+        self.load_cookie_jar()
+        self.mcprun_task = kwargs.get("task", None)
+        self.mcprun_login_timeout = kwargs.get("mcprun_login_timeout", 60)
+        self.mcprun_run_timeout = kwargs.get("mcprun_run_timeout", 60)
+        self.name = self.mcprun_task
+        task = None
+        try:
+            task = self.find_task()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                self.login()
+                task = self.find_task()
+            else:
+                raise e
+        except Exception as e:
+            raise ValueError("Task not found")
+        self.description = task.get("openai", task.get("anthropic", {})).get("prompt", "")
         self.mcprun_profile = kwargs.get("profile", "default")
         self.input_model = kwargs.get("input_model", None)
-        self.mcprun_task = kwargs.get("task", None)
         self.inputs = {
             "task": {
                 "type": "object",
@@ -34,33 +55,23 @@ class MCPRun(Provision):
                 **pydantic_model_to_simple_schema(self.input_model),
             }
         }
-        self.name = self.mcprun_task
+        
         self.mcprun_presigned_url = None
-        self.mcprun_login_timeout = kwargs.get("mcprun_login_timeout", 60)
-        self.mcprun_run_timeout = kwargs.get("mcprun_run_timeout", 60)
-        self.cookies = RequestsCookieJar()
-        self.load_cookie_jar()
-    
-    def init(self):
-        self.login()
-        task = self.find_task()
-        if task is None:
-            raise ValueError("Task not found")
-        self.description = task.get("openai", task.get("anthropic", {}).get("prompt", ""))
-        self.inputs = {} # TODO: KEINE AHNUNG ALTER
-        # self.create_signed_url() # gets done in run_task automatically
-        return self
+        
+        
     
     
     def persist_cookie_jar(self):
         # TODO: use lib to save cookies in the right folder
-        with open("cookiejar.json", "w") as f:
+        cookie_jar_path = get_data_path_for(["mcprun","cookiejar.json"])
+        os.makedirs(os.path.dirname(cookie_jar_path), exist_ok=True)
+        with open(cookie_jar_path, "w") as f:
             json.dump(requests.utils.dict_from_cookiejar(self.cookies), f)
     
     def load_cookie_jar(self):
-        # TODO: use lib to load cookies from the right folder
-        if os.path.exists("cookiejar.json"):
-            with open("cookiejar.json", "r") as f:
+        cookie_jar_path = get_data_path_for(["mcprun","cookiejar.json"])
+        if os.path.exists(cookie_jar_path):
+            with open(cookie_jar_path, "r") as f:
                 self.cookies = requests.utils.cookiejar_from_dict(json.load(f))
 
     def api_request(self, path, method, data=None, headers={}):
@@ -110,6 +121,7 @@ class MCPRun(Provision):
             resp = self.api_request(f"/login/poll?code={code}", "GET")
             if resp.get('status') == 'ok':
                 print("Login approved")
+                self.persist_cookie_jar()
                 break
             time.sleep(2)
         else:
