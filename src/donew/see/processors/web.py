@@ -881,7 +881,9 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
             browser = await playwright.chromium.launch(
                 **kwargs
             )
-        return browser
+            context_kwargs = {k: v for k, v in self._kwargs.items() if k in ["screen","no_viewport","bypass_csp"]}
+            
+        return await browser.new_context(**context_kwargs)
 
     async def a_process(self) -> WebBrowser:
         """Async version of process.

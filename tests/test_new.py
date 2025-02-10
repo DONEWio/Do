@@ -520,7 +520,29 @@ def test_mcp_task_run():
 
 
 def test_mcp_task_run_wolfram_alpha():
-    # define the expectations
+   
+    # give super doer a name and purpose and a model
+    super_doer = DO.New(LiteLLMModel(model_id="gpt-4o-mini"),
+                        name='math_assistant', 
+                        purpose='solves math problems')
+    
+    # define the provisions 
+    provisions = [
+        MCPRun(profile="denizkenan/wolfram",
+                task="AskWolframAlpha",
+                input_model=create_model("InputSchema", question=(str, Field(description="The math question to solve using wolfram alpha")))),
+        DO.Browse(headless=False,channel="chrome")
+    ]
+   
+    # define the task
+
+    task = """
+    I need to solve math questions at the website 'https://www.careerlauncher.com/cbse-ncert/class-10/Math/CBSE-Polynomials.html'.
+    1- visit the "important questions" section and get the questions
+    2- solve first 4 questions with detailed steps
+    """
+
+    # define the expectations (OPTIONAL)
     class Question(BaseModel):
         question_number: int = Field(description="The question number at the website")
         question: str = Field(description="The question to be solved")
@@ -528,32 +550,11 @@ def test_mcp_task_run_wolfram_alpha():
         detailed_explanation: str = Field(description="The detailed explanation to the question")
 
     class Result(BaseModel):
-        questions: list[Question] = Field(description="The questions to ask to wolfram alpha")
+        questions: list[Question] = Field(description="The questions with their answers and detailed explanations")
 
-    #pick the provisions for the realm
-    mcp = MCPRun(profile="denizkenan/wolfram",
-                task="AskWolframAlpha",
-                input_model=create_model("InputSchema", question=(str, Field(description="The question to ask to wolfram alpha"))))
-    browser = DO.Browse(headless=False)
-
-
-    # give super doer a name and purpose and a model
-    super_doer = DO.New(LiteLLMModel(model_id="gpt-4o-mini"),
-                        name='math_assistant', 
-                        purpose='solves math problems')
-    # define the realm and envision what is expected
-    super_doer = super_doer.realm([mcp, browser]).envision(Result)
-   
-    # define the task
-
-    task = """
-    I need to solve math questions at the website 'https://www.careerlauncher.com/cbse-ncert/class-10/Math/CBSE-Polynomials.html'.
-    1- visit the "important questions" section and get the questions
-    2- solve first 4 questions with detailed steps using wolfram alpha
-    """
     
     #fullfill the task. super doer will handle the task within its capabilities of its realm
-    result: Result = super_doer.enact(task)
+    result: Result = super_doer.realm(provisions).envision(Result).enact(task)
   
     #print the results
     for question in result.questions:

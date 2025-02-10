@@ -32,6 +32,7 @@ for example:
 imagine couple of functions are provided such as browser and financial calculator
 they are not aware of each other. browser cannot know the financial calculator's task vice versa.
 so you must assist them to handle their task within their capabilities. pre precise to them in a way that they can understand what to return
+DO NOT TRY TO DO THE TASK BY YOURSELF IF THERE IS A FUNCTION THAT CAN DO THE TASK BETTER(eg. financial calculator and browser can do the task better than you coding the solution).
 eg.
 - detailed answer for the question
 - a section/table/form/link from the website (don't assume this unless this task is specifically requested this way)
