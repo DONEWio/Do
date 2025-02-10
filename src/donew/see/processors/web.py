@@ -679,7 +679,7 @@ class WebBrowser(BaseTarget):
         bbox: Optional[Tuple[float, float, float, float]] = None,
         viewport: Optional[bool] = None,
     ) -> bytes:
-        return await self._current_page().a_image(element_id, bbox, viewport)
+        return await self._current_page().image(element_id, bbox, viewport)
 
     @public(order=8)
     @documentation(extends=WebPage.text)

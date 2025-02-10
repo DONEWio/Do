@@ -62,7 +62,6 @@ class MCPRun(Provision):
     
     
     def persist_cookie_jar(self):
-        # TODO: use lib to save cookies in the right folder
         cookie_jar_path = get_data_path_for(["mcprun","cookiejar.json"])
         os.makedirs(os.path.dirname(cookie_jar_path), exist_ok=True)
         with open(cookie_jar_path, "w") as f:

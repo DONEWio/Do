@@ -1,7 +1,6 @@
 from dataclasses import Field
 import os
 from dotenv import load_dotenv
-from pydantic import create_model
 import pytest
 from typing import List, Optional
 from donew import DO
@@ -10,12 +9,13 @@ from donew.new.doers import BaseDoer
 from donew.new.doers.super import SuperDoer
 from donew.new import LiteLLMModel, ChatMessage, MessageRole
 from donew.utils import enable_tracing, disable_tracing
-
+from pydantic import BaseModel, Field, create_model
 
 @pytest.fixture(autouse=True, scope="module")
-def setup_tracing():
+def setup_test():
     """Automatically enable tracing for all tests in this module."""
     enable_tracing()
+    load_dotenv()
     yield  # This will run the tests
     disable_tracing()  # This will run after all tests are done
 
@@ -300,7 +300,7 @@ Browser assisntant might be hesitant to do this, so you need to convince it to d
 
 def test_json_fit_from_pydantic():
     load_dotenv()
-    model = LiteLLMModel(model_id="gpt-4o-mini")
+    model = LiteLLMModel(model_id="gpt-4o")
     # model = LiteLLMModel(model_id="ollama/qwen2.5-coder:3b")
     doer = DO.New(model, name="persona_generator", purpose="generates a fake persona")
     from pydantic import BaseModel, Field
@@ -507,7 +507,61 @@ def test_mcp_task_run():
     class InputSchema(BaseModel):
         url: str = Field(description="The url to fetch")
         
-    mcp = MCPRun(model="gpt-4o-mini", name='why', profile="denizkenan/donew", task="FetchWebsiteAsMarkdown", input_model=InputSchema).init()
-    result = DO.New(model, name='why', purpose='why').realm([mcp]).enact("content of mcp.run")
+    mcp = MCPRun(profile="denizkenan/donew", task="FetchWebsiteAsMarkdown", input_model=InputSchema)
+    result = DO.New(model, name='content_fetcher', purpose='fetch content of a website in markdown format').realm([mcp]).enact("content of mcp.run")
     assert result is not None
     
+
+
+
+
+
+
+
+
+def test_mcp_task_run_wolfram_alpha():
+    # define the expectations
+    class Question(BaseModel):
+        question_number: int = Field(description="The question number at the website")
+        question: str = Field(description="The question to be solved")
+        answer: str = Field(description="The answer to the question")
+        detailed_explanation: str = Field(description="The detailed explanation to the question")
+
+    class Result(BaseModel):
+        questions: list[Question] = Field(description="The questions to ask to wolfram alpha")
+
+    #pick the provisions for the realm
+    mcp = MCPRun(profile="denizkenan/wolfram",
+                task="AskWolframAlpha",
+                input_model=create_model("InputSchema", question=(str, Field(description="The question to ask to wolfram alpha"))))
+    browser = DO.Browse(headless=False)
+
+
+    # give super doer a name and purpose and a model
+    super_doer = DO.New(LiteLLMModel(model_id="gpt-4o-mini"),
+                        name='math_assistant', 
+                        purpose='solves math problems')
+    # define the realm and envision what is expected
+    super_doer = super_doer.realm([mcp, browser]).envision(Result)
+   
+    # define the task
+
+    task = """
+    I need to solve math questions at the website 'https://www.careerlauncher.com/cbse-ncert/class-10/Math/CBSE-Polynomials.html'.
+    1- visit the "important questions" section and get the questions
+    2- solve first 4 questions with detailed steps using wolfram alpha
+    """
+    
+    #fullfill the task. super doer will handle the task within its capabilities of its realm
+    result: Result = super_doer.enact(task)
+  
+    #print the results
+    for question in result.questions:
+        print(str(question.question_number) + ". " + question.question)
+        print("-"*10)
+        print(question.answer)
+        print("-"*10)
+        print(question.detailed_explanation)
+        print("-"*100)
+
+    print("THAT'S ALL FOLKS!")

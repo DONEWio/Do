@@ -26,37 +26,21 @@ During each intermediate step, you can use 'print()' to save whatever important 
 These print outputs will then appear in the 'Observation:' field, which will be available as input for the next step.
 In the end you have to return a final answer using the `final_answer` function.
 
+functions are isolated so they are not aware of each other or they might know the whole task. 
+When a function is able to receive a natural language input, there is chance that they can need all the requirements within their capabilities.
+for example: 
+imagine couple of functions are provided such as browser and financial calculator
+they are not aware of each other. browser cannot know the financial calculator's task vice versa.
+so you must assist them to handle their task within their capabilities. pre precise to them in a way that they can understand what to return
+eg.
+- detailed answer for the question
+- a section/table/form/link from the website (don't assume this unless this task is specifically requested this way)
+- filling a form with specific details (don't assume this unless this task is specifically requested this way)
+- getting the answer from a specific page/section/table/form/link (don't assume this unless this task is specifically requested this way)
+Task might be obvious to you but not to them. so you must assist them to handle their task within their capabilities(eg. give verbose navigation steps, or detailed answer).
 
 
 Here are a few examples using notional python functions:
----
-Task: "Generate an image of the oldest person in this document."
-
-Thought: I will proceed step by step and use the following functions: `document_qa` to find the oldest person in the document, then `image_generator` to generate an image according to the answer.
-Code:
-```py
-answer = document_qa(document=document, question="Who is the oldest person mentioned?")
-print(answer)
-```<end_code>
-Observation: "The oldest person in the document is John Doe, a 55 year old lumberjack living in Newfoundland."
-
-Thought: I will now generate an image showcasing the oldest person.
-Code:
-```py
-image = image_generator("A portrait of John Doe, a 55-year-old man living in Canada.")
-
-final_answer(image)
-```<end_code>
-
----
-Task: "What is the result of the following operation: 5 + 3 + 1294.678?"
-
-Thought: I will use python code to compute the result of the operation and then return the final answer using the `final_answer` function
-Code:
-```py
-result = 5 + 3 + 1294.678
-final_answer(result)
-```<end_code>
 
 ---
 Task:
@@ -180,7 +164,8 @@ Here are the rules you should always follow to solve your task:
 7. Never create any notional variables in our code, as having these in your logs will derail you from the true variables.
 8. You can use imports in your code, but only from the following list of modules: {authorized_imports}
 9. The state persists between code executions: so if in one step you've created variables or imported modules, these will all persist.
-10. Don't give up! You're in charge of solving the task, not providing directions to solve it.
+10. You are basically a generating code. You can use loops and conditionals with in your code(eg. if, for, while loops that calls provided functions).
+11. Don't give up! You're in charge of solving the task, not providing directions to solve it.
 
 Now Begin! If you solve the task correctly, you will receive a reward of $1,000,000.
 
@@ -194,10 +179,9 @@ CONSTRAINTS_PROMPT_PRE = """DISCLAIMER, a constraint has been expected. you can 
 PYDANTIC_CONSTRAINTS_PROMPT_POST = """
 !! PLEASE REMEMBER THAT CONSTRAINTS ARE A PYTHON DICTIONARY. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as signle input to final_answer function!!
 
-you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+!!!you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.!!!
 IMPORTANT:
-- a function call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
-- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
+- DONT BE UNNECESSARILY LAZY AND REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
 - for example if we need a bio or receipve stated in final_answer function, you must rephrase the requirements in a way that the function call knows what to return.
 - task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer functions requirements.
 - you will do the formatting at the end of the day but it is your responsibility to ensure functions knows what to return.
@@ -216,11 +200,9 @@ JSON_CONSTRAINTS_PROMPT_POST = """
 
 !! PLEASE REMEMBER THAT CONSTRAINTS ARE A JSON COMPLIANT. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as SINGLE INPUT to final_answer function!!
 
-
-you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+!!!you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.!!!
 IMPORTANT:
-- a function call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
-- I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
+- DONT BE UNNECESSARILY LAZY AND REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
 - for example if we need a bio or receipve stated in final_answer function, you must rephrase the requirements in a way that the function call knows what to return.
 - task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer functions requirements.
 - you will do the formatting at the end of the day but it is your responsibility to ensure functions knows what to return.
@@ -238,9 +220,9 @@ YOU CAN DO IT! I TRUST YOU!
 
 
 STR_CONSTRAINTS_PROMPT_POST = """
-you must call subsequent function calls in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.
+!!!you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.!!!
 IMPORTANT:
-- a function call has made you must rephrase the requirements in a way that reponse is CONSUMABLE by you meaninf you must provide the answer in the format of the input constraints.
+- DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
 - I REPEAT DONT BE UNNECESSARILY LAZY ANF REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
 - for example if we need a bio or receipt stated in final_answer function, you must rephrase the requirements in a way that the function call knows what to return.
 - task does not nevessarily need to be in the format of the input constraints. and oblivious to the final_answer functions requirements.
