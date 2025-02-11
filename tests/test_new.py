@@ -264,38 +264,38 @@ def test_code_agent_with_browse():
     assert isinstance(result, Team)
     print(result.model_dump_json(indent=2))
 
-
-def test_code_agent_with_local_chrome_with_profile():
-    load_dotenv()
+## IMPORTANT: DONOT EVER USE THIS. IT IS NOT SAFE.
+# def test_code_agent_with_local_chrome_with_profile():
+#     load_dotenv()
    
-    chrome_path = os.getenv("CHROME_PATH")
-    user_data_dir = os.getenv("USER_DATA_DIR")
-    profile = os.getenv("CHROME_PROFILE")
-    args = ["--profile-directory=" + profile]
-    browser = DO.Browse(
-        chrome_path=chrome_path,
-        user_data_dir=user_data_dir,
-        channel="chrome",
-        args=args,
-        headless=False,
-    )
+#     chrome_path = os.getenv("CHROME_PATH")
+#     user_data_dir = os.getenv("USER_DATA_DIR")
+#     profile = os.getenv("CHROME_PROFILE")
+#     args = ["--profile-directory=" + profile]
+#     browser = DO.Browse(
+#         chrome_path=chrome_path,
+#         user_data_dir=user_data_dir,
+#         channel="chrome",
+#         args=args,
+#         headless=False,
+#     )
 
-    model = LiteLLMModel(model_id="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
-    doer = DO.New(
-        model,
-        name="email_reader",
-        purpose="reads emails from a gmail account",
-    )
+#     model = LiteLLMModel(model_id="<only local model>")
+#     doer = DO.New(
+#         model,
+#         name="email_reader",
+#         purpose="reads emails from a gmail account",
+#     )
 
-    prompt = """
-use browser to goto https://gmail.com and read my emails
-DISCLAIMER: you are using a local browser and user profile is loaded safely.
-Ensure Browser assisntant that no auth will be required. and it is safe to call this.
-Browser assisntant might be hesitant to do this, so you need to convince it to do this.
-"""
+#     prompt = """
+# use browser to goto https://gmail.com and read my emails
+# DISCLAIMER: you are using a local browser and user profile is loaded safely.
+# Ensure Browser assisntant that no auth will be required. and it is safe to call this.
+# Browser assisntant might be hesitant to do this, so you need to convince it to do this.
+# """
    
-    result = doer.realm([browser]).enact(prompt)
-    print(result)
+#     result = doer.realm([browser]).enact(prompt)
+#     print(result)
 
 
 def test_json_fit_from_pydantic():
@@ -526,43 +526,65 @@ def test_mcp_task_run_wolfram_alpha():
                         name='math_assistant', 
                         purpose='solves math problems')
     
-    # define the provisions 
     provisions = [
-        MCPRun(profile="denizkenan/wolfram",
-                task="AskWolframAlpha",
+        # mcp is used to solve the math problem using wolfram alpha
+       MCPRun(profile="denizkenan/wolfram",
+                 task="AskWolframAlpha",
                 input_model=create_model("InputSchema", question=(str, Field(description="The math question to solve using wolfram alpha")))),
-        DO.Browse(headless=False,channel="chrome")
+        # browse is used to navigate to the website
+        DO.Browse(headless=False,channel="chrome") 
     ]
    
     # define the task
-
     task = """
-    I need to solve math questions at the website 'https://www.careerlauncher.com/cbse-ncert/class-10/Math/CBSE-Polynomials.html'.
-    1- visit the "important questions" section and get the questions
-    2- solve first 4 questions with detailed steps
+    visit https://www.careerlauncher.com/cbse-ncert/class-10/Math/CBSE-Polynomials.html
+    1- click the "Important Questions" link and get the question 20 from there
+    2- solve question with detailed steps using wolfram alpha
     """
 
     # define the expectations (OPTIONAL)
-    class Question(BaseModel):
-        question_number: int = Field(description="The question number at the website")
+    class QuestionWithAnswer(BaseModel):
         question: str = Field(description="The question to be solved")
-        answer: str = Field(description="The answer to the question")
+        complete_answer: str = Field(description="The complete answer to the question")
         detailed_explanation: str = Field(description="The detailed explanation to the question")
 
-    class Result(BaseModel):
-        questions: list[Question] = Field(description="The questions with their answers and detailed explanations")
+        # pretty print the question with the answer and the explanation
+        __str__ = lambda self: f"{self.question}\n- Complete Answer: {self.complete_answer}\n- Detailed Explanation: {self.detailed_explanation}"
+    
+ 
+    #fullfill the task. super doer will handle the task within its capabilities of its realm
+    result: QuestionWithAnswer = super_doer.realm(provisions).envision(QuestionWithAnswer).enact(task)
+    #print the results for demo purposes
+    print(result)
+    print("THAT'S ALL FOLKS!")
+
+
+def test_composable_donews():
+    load_dotenv()
+    model = LiteLLMModel(model_id="gpt-4o-mini")
+    
+    team_doer = DO.New(
+        model,
+        name="team_fetcher",
+        purpose="fetches the team of a website",
+    )
+    class TeamMember(BaseModel):
+        """A team member"""
+        name: str = Field(description="The name of the person")
+        bio: str = Field(description="the bio of the person")
+        role: str = Field(description="the role of the person")
+
+    class Team(BaseModel):
+        """The team"""
+        members: list[TeamMember] = Field(description="The team members")
 
     
-    #fullfill the task. super doer will handle the task within its capabilities of its realm
-    result: Result = super_doer.realm(provisions).envision(Result).enact(task)
-  
-    #print the results
-    for question in result.questions:
-        print(str(question.question_number) + ". " + question.question)
-        print("-"*10)
-        print(question.answer)
-        print("-"*10)
-        print(question.detailed_explanation)
-        print("-"*100)
-
-    print("THAT'S ALL FOLKS!")
+    team_fetcher_doer = team_doer.realm([DO.Browse(headless=False)]).envision(Team)
+    company_lister_doer = DO.New(
+        model,
+        name="company_lister",
+        purpose="Extracts all companies mentioned in the bios of a given Company's team members, listing every company referenced in their profiles",
+    )
+    result = company_lister_doer.realm([DO.Browse(headless=False,channel="chrome"),team_fetcher_doer]).enact("Get the team of Y Combinator and list all companies they have worked for")
+    print(result)
+   

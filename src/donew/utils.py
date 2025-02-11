@@ -191,7 +191,10 @@ def pydantic_model_to_simple_schema(
     try:
         schema = model_or_schema if isinstance(model_or_schema, dict) else model_or_schema.model_json_schema()
         properties = schema["properties"]
+        
         result = {prop_name: transform_property(prop_name, prop_info) for prop_name, prop_info in properties.items()}
+        if "description" in schema:
+            result["__description__"] = schema["description"]
         return result
     except Exception as e:
         raise ValueError(f"Error processing schema: {str(e)}")

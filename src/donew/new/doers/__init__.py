@@ -39,6 +39,6 @@ class BaseDoer(ABC):
         pass
 
     @abstractmethod
-    async def enact(self, task: str, params: Optional[dict[str, Any]] = None) -> Any:
+    async def enact(self, task: str, **kwargs) -> Any:
         """Execute a task"""
         pass

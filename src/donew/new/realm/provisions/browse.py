@@ -98,20 +98,38 @@ browser.goto("<target_website>")
 browser.text()
 ```
 when returning a response get it as a text by calling `browser.text()`
-dont return browser object, just the text.
+dont return browser object, just the text. The returned text is tagged with very CRITICAL navigation details.
+IT IS NOT JUST PLAIN TEXT. IT IS TAGGED WITH STRUCTURED SECTIONS AND HYPERLINKS.
+example text:
+```
+@101 - Landing Page
+@105 - Shop Now
+@109 - Services
+@113 - About Us
+@120 - Resource Center
+@125 - Quick Links @130 - Blog @135 - Support Guidelines
+Discover our innovative solutions and company story in detail.
 
+@140 - Media
+@144 - Special Offers
+@148 - User Testimonials
+@152 - FAQ
+@156 - Gallery
+@160 - Contact Info
+OUR FEATURED COLLECTION
+... website content
+```
+NEVER IGNORE TASK INSTRUCTIONS esp. navigating to a specific section, table, form, link, etc.
+you can click by referring to the @<element_id>.
 text return links with their element_id. so dont shy away from browsing it like a human, meaning try to click on the links and see what happens if it is necessary.
 
 DONT TRUNCATE OR CUT OFF ANYTHING. return what you see. that is RELEVANT to the task request.
 
 BEFORE YOU RETURN ANYTHING, THINK CAREFULLY ABOUT THE TASK AND THE STEPS YOU HAVE TAKEN.
-for example if you are asked to get the answer from a specific page, you must do so.
-if you are asked to get the answer from a specific section, you must do so.
-if you are asked to get the answer from a specific table, you must do so.
-if you are asked to get the answer from a specific form, you must do so.
-if you are asked to get the answer from a specific link, you must do so.
+If the task explicitly instructs you to visit a particular page, section, table, form, or link, then you must perform that navigation step directly—even if similar content is already visible on the current page.
+Note: Do not assume that the presence of similar content means you have fulfilled the instruction. Explicitly moving to the specified location is required to meet the task’s demands.
 
-getting answer from right page is more important than the returning first answer that looks obvious.
+!!!getting answer from right page is more important than the returning first answer that looks obvious.!!!
 
 Now Begin! If you solve the task correctly, you will receive a reward of $1,000,000.
 """

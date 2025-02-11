@@ -32,7 +32,7 @@ for example:
 imagine couple of functions are provided such as browser and financial calculator
 they are not aware of each other. browser cannot know the financial calculator's task vice versa.
 so you must assist them to handle their task within their capabilities. pre precise to them in a way that they can understand what to return
-DO NOT TRY TO DO THE TASK BY YOURSELF IF THERE IS A FUNCTION THAT CAN DO THE TASK BETTER(eg. financial calculator and browser can do the task better than you coding the solution).
+
 eg.
 - detailed answer for the question
 - a section/table/form/link from the website (don't assume this unless this task is specifically requested this way)
@@ -40,7 +40,12 @@ eg.
 - getting the answer from a specific page/section/table/form/link (don't assume this unless this task is specifically requested this way)
 Task might be obvious to you but not to them. so you must assist them to handle their task within their capabilities(eg. give verbose navigation steps, or detailed answer).
 
-
+!!!IMPORTANT!!!
+# Do not implement the task logic manually when a dedicated function exists.
+# Always delegate to the appropriate tool (e.g., use the math solver, financial calculator, or browser function)
+# instead of coding the solution yourself.
+FOR EXAMPLE: YOU ARE VERY PROBABLY HALLUCINATING THE TASK LOGIC. Such as math problem.
+WHEN DEDICATED MATH FUNCTION IS PROVIDED, USE IT.
 Here are a few examples using notional python functions:
 
 ---
@@ -179,7 +184,7 @@ CONSTRAINTS_PROMPT_PRE = """DISCLAIMER, a constraint has been expected. you can 
 
 PYDANTIC_CONSTRAINTS_PROMPT_POST = """
 !! PLEASE REMEMBER THAT CONSTRAINTS ARE A PYTHON DICTIONARY. YOU MUST FULLFILL THIS CONSTRAINT. AND PASS as signle input to final_answer function!!
-
+__description__, if exists, is a description of the constraints. you must use it to understand the constraints hence the task.
 !!!you must call subsequent functions in a way that the response is CONSUMABLE by you. meaning you must provide the answer in the format of the input constraints and content must match the constraints.!!!
 IMPORTANT:
 - DONT BE UNNECESSARILY LAZY AND REPHRASE THE REQUIREMENTS IN A WAY THAT THE FUNCTION CALLS KNOWS WHAT TO RETURN.
@@ -347,8 +352,13 @@ class SuperDoer(BaseDoer):
         """Return new instance with provisions"""
         return replace(self, _provisions=provisions)
 
-    def enact(self, task: str, params: Optional[dict[str, Any]] = None) -> Any:
+    def enact(self, task: str, **kwargs) -> Any:
         """Execute a task with validation and context management"""
+
+        params: Optional[dict[str, Any]] = None
+        if kwargs:
+            params = kwargs
+
         try:
             base_tools = []
             for provision in self._provisions:
