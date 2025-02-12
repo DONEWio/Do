@@ -1,154 +1,90 @@
-# DoNew
+# DoNew: Your Composable Task Library
 
 [![PyPI version](https://badge.fury.io/py/donew.svg)](https://badge.fury.io/py/donew)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/donew)](https://pypi.org/project/donew/)
 [![PyPI - License](https://img.shields.io/pypi/l/donew)](https://pypi.org/project/donew/)
 
-A powerful Python package designed for AI agents to perform web processing, document navigation, and autonomous task execution. DoNew provides a high-level, agentic interface that makes it easy for AI systems to interact with web content and documents.
+## What is DoNew?
+
+DoNew is a Python package designed to empower AI agents to interact effortlessly with web content and documents through high-level, intuitive interfaces. It bridges the gap between advanced AI capabilities and real-world applications by offering robust tools for web automation, document processing, and autonomous task execution. Developers can build isolated tasks that integrate seamlessly with their favorite tools, composing them either horizontally as peers or vertically as nested workflows to orchestrate complex operations, all while keeping each task self-contained and extendable.
 
 ## Quick Install
 
 ```bash
 pip install donew
-donew-install-browsers  # Install required browsers
+playwright install  # Install required browsers
 ```
 
-## Why DoNew?
+## Key Features
+- Task Planning & Multi-Step Operations: Organize complex workflows with clear planning and sequential execution.
+- Provision Isolation: Context is isolated from the rest of the world. Each provision is a self-contained unit during runtime.
+- Web Automation (DO.Browse): Leverage Playwright-based browser automation featuring smart element detection, visual debugging, and integrated knowledge graph extraction.
+- Knowledge Processing: Utilize multi-model entity extraction (GLiNER), relationship mapping (GLiREL), advanced text analysis with spaCy, and robust graph storage via KuzuDB.
+- Task Composition & Context Awareness: Achieve both horizontal (parallel provisions) and vertical (nested tasks) composition with comprehensive state and context management.
+- Plug-and-Play Provisions: Comes with batteries included—ready-made tools such as MCP.run tasks and Restack workflows.
 
-DoNew is built with AI agents in mind, providing intuitive interfaces for:
-- Autonomous web navigation and interaction
-- Document understanding and processing
-- Task execution and decision making
-- State management and context awareness
+## Core Concepts
 
-## Features
+### Terminology
+- **Doer**: A task executor that can be enacted. instance of DO.New
+- **Provision**: A tool that can be used to enact a doer.
+- **Realm**: The context in which a doer is enacted.
+- **Envision**: The expected output of a doer.
+- **Enact**: The act that triggers a doer to start its journey.
 
-- Browser automation using Playwright
-- Web page processing and interaction
-- Vision-related tasks and image processing
-- Easy-to-use API for web automation
-- Async support for better performance
-- AI-friendly interfaces for autonomous operation
+### Goals
+0. Intuitive interface DO.New for task execution, DO.Browse for standalone web automation
+1. Provide AI-first interfaces for web and document interaction
+2. Enable autonomous decision-making and task execution
+3. Maintain high reliability and performance
+4. Ensure excellent developer experience
+5. Support both simple and complex AI agent workflows
+6. Provide batteries included provisions
+7. Hide underlying complexity from the user
 
-## Roadmap
+## Usage Guide
 
-### Current Features
-- **DO.Browse**: Agentic web navigation
-  - Autonomous webpage interaction
-  - Element detection and manipulation
-  - State awareness and context management
-  - Cookie and storage handling
-  - Visual debugging tools
-
-### Coming Soon
-- **DO.Read**: Agentic document navigation
-  - PDF processing and understanding
-  - Document structure analysis
-  - Content extraction and processing
-  - Cross-document reference handling
-
-- **DO(...).New**: Agentic behavior execution
-  - Task planning and execution
-  - Decision making based on content
-  - Multi-step operation handling
-  - Context-aware actions
-
-## Quick Start
-
-```python
-import asyncio
-from donew import DO
-
-async def main():
-    # Configure browser settings (optional)
-    DO.Config(headless=True)  # Run in headless mode
-    
-    # Start agentic web navigation
-    browser = await DO.Browse("https://example.com")
-    
-    try:
-        # Analyze page content
-        content = await browser.text()
-        print("Page content:", content)
-        
-        # Get all interactive elements with their context
-        elements = browser.elements()
-        
-        # Smart element detection (finds relevant input fields by context)
-        input_fields = {
-            elem.element_label or elem.attributes.get("name", ""): id
-            for id, elem in elements.items()
-            if elem.element_type == "input"
-            and elem.attributes.get("type") in ["text", "email"]
-        }
-        
-        # Autonomous form interaction
-        for label, element_id in input_fields.items():
-            await browser.type(element_id, f"test_{label}")
-        
-        # State management
-        cookies = await browser.cookies()
-        print("Current browser state (cookies):", cookies)
-        
-        # Context persistence
-        await browser.storage({
-            "localStorage": {"agent_context": "form_filling"},
-            "sessionStorage": {"task_state": "in_progress"}
-        })
-        
-        # Visual debugging (helps AI understand page state)
-        await browser.toggle_annotation(True)
-        
-        # Get current state for decision making
-        state = await browser._get_state_dict()
-        print("Current agent state:", state)
-        
-    finally:
-        await browser.close()
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### Example: AI Agent Task Execution
+### 1. Creating a Task with DO.New
 
 ```python
 from donew import DO
 
-async def search_and_extract(query: str):
-    browser = await DO.Browse("https://example.com/search")
-    try:
-        # Find and interact with search form
-        elements = browser.elements()
-        search_input = next(
-            (id for id, elem in elements.items() 
-             if elem.element_type == "input" and 
-             ("search" in elem.element_label.lower() if elem.element_label else False)),
-            None
-        )
-        
-        if search_input:
-            # Execute search
-            await browser.type(search_input, query)
-            await browser.press("Enter")
-            
-            # Wait for and analyze results
-            content = await browser.text()
-            
-            # Extract structured data
-            return {
-                "query": query,
-                "results": content,
-                "page_state": await browser._get_state_dict()
-            }
-    finally:
-        await browser.close()
+# Create a new task (doer) with a model
+model = LitellmModel()
+doer = DO.New(model, name='example_task', purpose='demonstrate basic usage')
+```
+
+### 2. Adding Context with realm()
+
+```python
+# Assume browser is a provision for web tasks
+browser = DO.Browse(headless=False)
+
+doer = doer.realm([browser])
+```
+
+### 3. Enforcing Output Structure with envision()
+
+```python
+from pydantic import BaseModel, Field
+
+class Team(BaseModel):
+    members: list[str] = Field(description='List of team members')
+
+# This enforces that the output should match the Team schema
+constrained_doer = doer.envision(Team)
+```
+
+### 4. Kickstarting the Workflow with enact()
+
+```python
+result = constrained_doer.enact('goto https://unrealists.com and find the team')
 ```
 
 ## Development Setup
 
 ### Requirements
-- Python 3.11 (required for Knowledge Graph functionality)
+- Python 3.11+ (required for Knowledge Graph functionality)
 - uv package manager (recommended over pip)
 
 ### Installation Steps
@@ -183,8 +119,6 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    uv pip install -e "."
    uv pip install -e ".[kg,dev]"
    uv run -- spacy download en_core_web_md
-   #uv run -- spacy download en_core_web_lg # Large web model
-   #uv run -- spacy download en_core_web_sm # Small web model
    ```
 
 5. Install Playwright browsers:
@@ -193,15 +127,12 @@ playwright install chromium
 playwright install # or all browsers
 ```
 
-
 ## Testing
 
 Run the test suite:
 ```bash
 pytest tests/ --httpbin-url=https://httpbin.org
 ```
-
-For more detailed testing options, including using local or remote httpbin, see the [Testing Documentation](docs/testing.md). (#TODO)
 
 ## Contributing
 
