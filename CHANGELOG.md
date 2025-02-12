@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8] - 2024-03-25
+
+### Changed
+- Version bump for maintenance release
+
 ## [0.1.7] - 2024-03-22
 
 ### Changed
