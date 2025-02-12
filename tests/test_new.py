@@ -507,8 +507,8 @@ def test_mcp_task_run():
     class InputSchema(BaseModel):
         url: str = Field(description="The url to fetch")
         
-    mcp = MCPRun(profile="denizkenan/donew", task="FetchWebsiteAsMarkdown", input_model=InputSchema)
-    result = DO.New(model, name='content_fetcher', purpose='fetch content of a website in markdown format').realm([mcp]).enact("content of mcp.run")
+    mcp = MCPRun(profile="denizkenan/donew", task="AskWolframAlpha", input_model=InputSchema)
+    result = DO.New(model, name='wolfram_assistant', purpose='asks wolfram alpha').realm([mcp]).enact("what is the sum of 1 and 2")
     assert result is not None
     
 

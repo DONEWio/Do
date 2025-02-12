@@ -47,7 +47,7 @@ Please use the async methods (A_browse, A_new) instead.""",
        
        
         web_processor = WebProcessor(**kwargs)
-        result = await web_processor.a_process()
+        result = await web_processor.initialize()
         return result
        
 

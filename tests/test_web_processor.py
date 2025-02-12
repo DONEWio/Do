@@ -6,12 +6,14 @@ import asyncio
 import json
 from typing import cast, TypedDict, Dict, Any
 
+from donew.see.processors.web import NavigationError
 from donew.utils import run_sync
 
 
 def test_web_processing_docs():
     """Test web processing through DO.See interface"""
-    docs = DO.Documentation("browse")
+    browser = DO.Browse()
+    docs = browser.documentation()
     assert docs is not None
     assert len(docs) > 0
     print(docs)
@@ -19,16 +21,17 @@ def test_web_processing_docs():
 
 def test_web_processing(httpbin_url, httpbin_available):
     """Test web processing through DO.See interface"""
-    result = DO.Browse(f"{httpbin_url}/")
-    assert result is not None
-    assert result._current_page().is_live()
-    result.close()
+    browser = DO.Browse()
+    browser.goto(httpbin_url)
+    assert browser is not None
+    assert browser._current_page().is_live()
+    browser.close()
 
 
 def test_cookie_management(httpbin_url, httpbin_available):
     """Test cookie management using httpbin's cookie endpoints"""
-    browser = DO.Browse(f"{httpbin_url}/cookies/set/test_cookie/test_value")
-
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/cookies/set/test_cookie/test_value")
     try:
         # Verify cookie was set
         cookies = browser.cookies()
@@ -37,7 +40,7 @@ def test_cookie_management(httpbin_url, httpbin_available):
         )
 
         # Navigate to cookies page to verify
-        browser.navigate(f"{httpbin_url}/cookies")
+        browser.goto(f"{httpbin_url}/cookies")
 
         # Get page content to verify cookies
         content = browser.text()
@@ -49,7 +52,8 @@ def test_cookie_management(httpbin_url, httpbin_available):
 
 def test_storage_management(httpbin_url, httpbin_available):
     """Test storage management using httpbin's HTML page"""
-    browser = DO.Browse(f"{httpbin_url}/html")
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/html")
 
     try:
         # Set storage values
@@ -66,7 +70,7 @@ def test_storage_management(httpbin_url, httpbin_available):
         assert storage["sessionStorage"]["session_key"] == "session_value"
 
         # Navigate to another page and verify storage persists
-        browser.navigate(f"{httpbin_url}/")
+        browser.goto(f"{httpbin_url}/")
         new_storage = browser.storage()
         assert new_storage["localStorage"]["test_key"] == "test_value"
         assert new_storage["sessionStorage"]["session_key"] == "session_value"
@@ -76,7 +80,8 @@ def test_storage_management(httpbin_url, httpbin_available):
 
 def test_http_methods(httpbin_url, httpbin_available):
     """Test different HTTP methods using httpbin endpoints"""
-    browser = DO.Browse(f"{httpbin_url}/forms/post")
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/forms/post")
 
     try:
         # Find form elements
@@ -122,7 +127,8 @@ def test_http_methods(httpbin_url, httpbin_available):
 
 def test_response_headers(httpbin_url, httpbin_available):
     """Test response headers using httpbin's headers endpoint"""
-    browser = DO.Browse(f"{httpbin_url}/headers")
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/headers")
 
     try:
         # Get page content
@@ -141,29 +147,44 @@ def test_response_headers(httpbin_url, httpbin_available):
 
 def test_status_codes(httpbin_url, httpbin_available):
     """Test different HTTP status codes using httpbin's status endpoints"""
-    browser = DO.Browse(f"{httpbin_url}/status/200", {"headless": True})
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/status/200")
 
     try:
         # Test successful response
         assert browser._current_page().is_live()
 
         # Navigate to a 404 page
-        browser.navigate(f"{httpbin_url}/status/404")
-        # The page should still be live even with 404
+        try:
+            browser.goto(f"{httpbin_url}/status/404")
+        except NavigationError as e:
+            assert e.url == f"{httpbin_url}/status/404"
+            # The page should still be live even with 404
+        assert browser._current_page().is_live()
+
+        status_code = browser.evaluate(
+            "window.performance.getEntries()[0].responseStatus"
+        )
+        assert status_code == 404
+        browser._current_page()._interaction_history[-1].interaction_type = "navigation_error"
+        #lets try again to check recovery
+        browser.goto(f"{httpbin_url}/status/200")
         assert browser._current_page().is_live()
 
         # Get the status code using JavaScript
         status_code = browser.evaluate(
             "window.performance.getEntries()[0].responseStatus"
         )
-        assert status_code == 404
+        assert status_code == 200
+        
     finally:
         browser.close()
 
 
 def test_image_processing(httpbin_url, httpbin_available):
     """Test image processing using httpbin's image endpoints"""
-    browser = DO.Browse(f"{httpbin_url}/image/png")
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/image/png")
 
     try:
         # Get elements and find the image
@@ -180,8 +201,7 @@ def test_image_processing(httpbin_url, httpbin_available):
         assert img_elem.attributes.get("src", "").endswith("/image/png")
 
         # Test JPEG format
-        browser.navigate(f"{httpbin_url}/image/jpeg")
-        time.sleep(1)
+        browser.goto(f"{httpbin_url}/image/jpeg")
         elements = browser.elements()
         img_elements = [
             (id, elem)
@@ -195,7 +215,7 @@ def test_image_processing(httpbin_url, httpbin_available):
         assert img_elem.attributes.get("src", "").endswith("/image/jpeg")
 
         # Test SVG format
-        browser.navigate(f"{httpbin_url}/image/svg")
+        browser.goto(f"{httpbin_url}/image/svg")
         elements = browser.elements()
         img_elements = [
             (id, elem)
@@ -217,13 +237,14 @@ def test_image_processing(httpbin_url, httpbin_available):
 
 def test_element_annotation(httpbin_url, httpbin_available):
     """Test web element annotation functionality"""
-    browser = DO.Browse(f"{httpbin_url}/forms/post")
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/forms/post")
 
     try:
         time.sleep(1)  # Wait for page load
 
         # Enable annotations
-        browser.toggle_annotation(True)
+        browser.annotation(True)
         time.sleep(1)
 
         # Verify annotations are added
@@ -232,7 +253,7 @@ def test_element_annotation(httpbin_url, httpbin_available):
         assert highlight_count > 0, "Annotations were not properly added"
 
         # Disable annotations
-        browser.toggle_annotation(False)
+        browser.annotation(False)
         time.sleep(1)
 
         # Verify annotations are removed
@@ -245,7 +266,8 @@ def test_element_annotation(httpbin_url, httpbin_available):
 
 def test_browser_state(httpbin_url, httpbin_available):
     """Test browser state reporting functionality"""
-    browser = DO.Browse(f"{httpbin_url}/forms/post")
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/forms/post")
 
     try:
         time.sleep(1)
@@ -300,18 +322,17 @@ def test_browser_config(httpbin_url, httpbin_available):
     user_data_dir = os.getenv("USER_DATA_DIR")
     profile=os.getenv("CHROME_PROFILE")
     args = ["--profile-directory=" + profile]
-    DO.Config(chrome_path=chrome_path, user_data_dir=user_data_dir, channel="chrome",args=args, headless=False)
-    browser = DO.Browse("https://docs.google.com")
-    time.sleep(30)  # Sleep for 30 seconds
+    browser = DO.Browse(chrome_path=chrome_path, user_data_dir=user_data_dir, channel="chrome",args=args, headless=False)
+    browser.goto("https://docs.google.com")
+   
     browser.close()
 
 
 def test_knowledge_graph_extraction(httpbin_url, httpbin_available):
     """Test Knowledge Graph extraction from web content"""
     # First browse to a page with structured content
-    browser = DO.Browse(
-        f"{httpbin_url}/html"
-    )  # local version of https://httpbin.org/html
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/html")
 
     try:
         # Get the page content

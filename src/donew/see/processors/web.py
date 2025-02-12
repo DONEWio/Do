@@ -7,10 +7,11 @@ import importlib.resources
 import os
 from pathlib import Path
 import random
-
+import logging
 
 from . import BaseProcessor, BaseTarget, StateDict, documentation, public
 
+logger = logging.getLogger(__name__)
 
 def get_script_path(filename: str) -> str:
     """Get the correct path for script files, handling both development and installed scenarios."""
@@ -74,6 +75,12 @@ class ElementMetadata:
     children_ids: List[int]  # Child element IDs
     state: Dict[str, Any]  # Element state
 
+class NavigationError(Exception):
+    """Exception raised when navigation fails."""
+    def __init__(self, url: str, message: str):
+        self.url = url
+        self.message = message
+        super().__init__(self.message)
 
 @dataclass
 class Interaction:
@@ -96,7 +103,7 @@ class WebPage(BaseTarget):
     _annotation_enabled: bool = False
     _channel: str = "chromium"
 
-    async def process(self, url: Optional[str] = None) -> "WebPage":
+    async def process(self, url: str) -> "WebPage":
         """Process a webpage and extract its elements.
         """
         if not self.is_live():
@@ -104,77 +111,29 @@ class WebPage(BaseTarget):
         if not self._page:
             raise ValueError("No page object available")
 
-        if not self._headless and self._channel == "chromium":
-            import warnings
-
-            warnings.warn(
-                "Running in headed mode may cause navigation errors with HTTP error responses "
-                "(like 404, 501) due to a known Chromium bug. "
-                "See: https://github.com/microsoft/playwright/issues/33962"
-            )
-
-        # Set up navigation handler
-        async def handle_navigation():
-            if not self._page:
-                return
-            
-            await asyncio.sleep(0.9)
-
-            # Log navigation as an interaction
-            self._interaction_history.append(
-                Interaction(
-                    element_id=-1,  # No element for navigation
-                    interaction_type="navigate",
-                    timestamp=time.time(),
-                    data={"url": self._page.url},
-                )
-            )
-
-            # Re-inject and execute element detection script
-            script = get_script_path("element_detection.js")
-            elements = await self._page.evaluate(script)
-
-            # Update elements
-            self._elements = {
-                int(id): ElementMetadata(**metadata)
-                for id, metadata in elements.items()
-            }
-
-            # Re-enable annotations if needed
-            if self._annotation_enabled:
-                await self.annotation(True)
-
-        # Listen for navigation events
-        self._page.on("domcontentloaded", lambda _: asyncio.create_task(handle_navigation()))
-
-        # Set up route handler to continue on error responses
-        async def handle_route(route):
-            
-            response = await route.fetch()
-            await route.fulfill(response=response)
-
-        await self._page.route(r"^(?!chrome-extension:).*", handle_route)
-
-        # If no url do nothing for navigation
-        if not url:
-            return self
-
         # Initial navigation with error handling
         try:
             await self._page.goto(url, wait_until="load")
-            await asyncio.sleep(3)
+            
+            
         except Exception as e:
-            if "ERR_HTTP_RESPONSE_CODE_FAILURE" in str(e) and self._headless:
-                raise ValueError(
+            if "net::ERR_HTTP_RESPONSE_CODE_FAILURE" in str(e):
+                logger.warning(
                     "Navigation error with HTTP error responses (like 404, 501) due to a known Chromium bug. "
                     "See: https://github.com/microsoft/playwright/issues/33962"
-                    "Try running in headless mode."
                 )
+                self._interaction_history.append(
+                    Interaction(
+                        element_id=-1,  # No element for navigation
+                        interaction_type="navigation_error",
+                        timestamp=time.time(),
+                        data={"url": url, "error": str(e)},
+                        )
+                )
+
+                raise NavigationError(url, str(e))
             else:
                 raise
-
-        # Ensure we process the page after networkidle
-        await handle_navigation()
 
         return self
 
@@ -532,7 +491,7 @@ Metadata includes element info, data, and page URL
 
         # Process all interactions including navigation
         for interaction in self._interaction_history:
-            if interaction.interaction_type == "navigate":
+            if interaction.interaction_type == "goto":
                 metadata = {"url": interaction.data["url"]}
             else:
                 element = self._elements.get(interaction.element_id)
@@ -567,7 +526,7 @@ that are not serializable by `JSON`: `-0`, `NaN`, `Infinity`, `-Infinity`.
     Any: The value of the expression.
 """
 
-        return await self._page.evaluate(script)  # type: ignore
+        return await self._page.evaluate(expression)  # type: ignore
 
 
 @dataclass
@@ -578,10 +537,7 @@ class WebBrowser(BaseTarget):
     _pages: List[WebPage] = field(default_factory=list)
     _headless: bool = True
     _channel: str = "chromium"
-    _interaction_history: List[Tuple[int, int]] = field(
-        default_factory=list
-    )  # (page_index, interaction_index)
-
+    
     def _current_page(self) -> WebPage:
         """Internal method to get current page."""
         if not self._pages:
@@ -589,6 +545,97 @@ class WebBrowser(BaseTarget):
                 "No pages available Initiate a browser and add a page first"
             )
         return self._pages[-1]
+    
+    async def initialize(self, url: str) -> "WebPage":
+        """Process a webpage and extract its elements.
+        """
+        _page = await self._browser.new_page()
+        new_page = WebPage(
+            _page=_page,
+            _annotation_enabled=False,
+            _headless=self._headless,
+            _channel=self._channel,
+        )
+        self._pages.append(new_page)
+
+        def handle_navigation_event():
+            asyncio.create_task(handle_navigation())
+        
+ 
+        _page.on("domcontentloaded", handle_navigation_event)
+
+        # Set up navigation handler
+        async def handle_navigation():
+            
+            try:
+                await _page.wait_for_load_state("networkidle", timeout=5000)
+            except Exception as e:
+                logger.warning(f"Failed to wait for networkidle: {e}")
+                pass
+            
+
+            # Log navigation as an interaction
+            self._current_page()._interaction_history.append(
+                Interaction(
+                    element_id=-1,  # No element for navigation
+                    interaction_type="goto",
+                    timestamp=time.time(),
+                    data={"url": _page.url},
+                )
+            )
+
+            # Re-inject and execute element detection script
+            script = get_script_path("element_detection.js")
+            elements = await _page.evaluate(script)
+
+            # Update elements
+            self._current_page()._elements = {
+                int(id): ElementMetadata(**metadata)
+                for id, metadata in elements.items()
+            }
+
+            # Re-enable annotations if needed
+            if self._current_page()._annotation_enabled:
+                await self._current_page().annotation(True)
+
+        
+
+     
+
+    
+        # Initial navigation with error handling
+        try:
+            await _page.goto(url, wait_until="load")
+            await asyncio.sleep(1)
+            try:
+                await _page.wait_for_load_state("networkidle", timeout=5000)
+            except Exception as e:
+                logger.warning(f"Failed to wait for networkidle: {e}")
+                pass
+            
+        except Exception as e:
+            if "net::ERR_HTTP_RESPONSE_CODE_FAILURE" in str(e):
+                logger.warning(
+                    "Navigation error with HTTP error responses (like 404, 501) due to a known Chromium bug. "
+                    "See: https://github.com/microsoft/playwright/issues/33962"
+                )
+                self._current_page()._interaction_history.append(
+                    Interaction(
+                        element_id=-1,  # No element for navigation
+                        interaction_type="navigation_error",
+                        timestamp=time.time(),
+                        data={"url": url, "error": str(e)},
+                        )
+                )
+
+                raise NavigationError(url, str(e))
+            else:
+                raise
+
+  
+
+        return self._current_page()
+
 
     @public(order=1)
     def goto(self, url: str):
@@ -601,6 +648,15 @@ class WebBrowser(BaseTarget):
     async def a_goto(self, url: str):
         if not self._browser:
             raise ValueError("No browser session")
+        
+        if not self._pages:
+           await self.initialize(url)
+           return
+        
+        try:
+            await self._current_page().process(url)
+        except Exception as e:
+            raise e
         current_page = self._current_page()
         pw_page = current_page.pw_page()
         current_page._page = None
@@ -610,8 +666,14 @@ class WebBrowser(BaseTarget):
             _headless=self._headless,
             _channel=self._channel,
         )
-        await new_page.process(url)
+        
         self._pages.append(new_page)
+        try:
+            await asyncio.sleep(1)
+            await self._current_page().pw_page().wait_for_load_state("networkidle", timeout=5000)
+        except Exception as e:
+            logger.warning(f"Failed to wait for networkidle: {e}")
+            pass
 
     @public(order=2)
     @documentation(extends=WebPage.annotation)
@@ -724,8 +786,8 @@ class WebBrowser(BaseTarget):
                 time_str = time.strftime("%H:%M:%S", time.localtime(timestamp))
 
                 # Format action based on type
-                if action_type == "navigate":
-                    action = f"Navigated to {metadata['url']}"
+                if action_type == "goto":
+                    action = f"Goto to {metadata['url']}"
                 elif action_type == "type":
                     text = metadata["data"].get("text", "")
                     xpath = metadata.get("xpath", "unknown")
@@ -794,13 +856,13 @@ class WebBrowser(BaseTarget):
         template="{extendee}",
         extends=WebPage.evaluate,
     )
-    def evaluate(self, script: str) -> Any:
+    def evaluate(self, expression: str) -> Any:
         """Evaluate JavaScript in the current page."""
-        return self._sync(self.a_evaluate(script))
+        return self._sync(self.a_evaluate(expression))
 
-    async def a_evaluate(self, script: str) -> Any:
+    async def a_evaluate(self, expression: str) -> Any:
         """Async version of evaluate."""
-        return await self._current_page().evaluate(script)
+        return await self._current_page().evaluate(expression)
 
     @public(order=11)
     @documentation(extends=WebPage.close)
@@ -873,15 +935,14 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
         playwright = await async_playwright().start()
         if self._kwargs["user_data_dir"]:
             self._kwargs["ignore_default_args"] = True
-          
-            browser = await playwright.chromium.launch_persistent_context(**self._kwargs)
-        else:
-            kwargs = {k: v for k, v in self._kwargs.items() if k in ["headless", "executable_path", "channel"]}
+            return await playwright.chromium.launch_persistent_context(**self._kwargs)
+        
+        kwargs = {k: v for k, v in self._kwargs.items() if k in ["headless", "executable_path", "channel"]}
 
-            browser = await playwright.chromium.launch(
-                **kwargs
-            )
-            context_kwargs = {k: v for k, v in self._kwargs.items() if k in ["screen","no_viewport","bypass_csp"]}
+        browser = await playwright.chromium.launch(
+            **kwargs
+        )
+        context_kwargs = {k: v for k, v in self._kwargs.items() if k in ["screen","no_viewport","bypass_csp"]}
             
         return await browser.new_context(**context_kwargs)
 
@@ -900,6 +961,20 @@ class WebProcessor(BaseProcessor[Union[str, Page]]):
 
         web_browser = WebBrowser(
             _browser=browser, _pages=[web_page], _headless=self._kwargs["headless"]
+        )
+
+        return web_browser
+    
+
+    async def initialize(self) -> WebBrowser:
+        """Async version of process.
+        Returns:
+            WebBrowser: A WebBrowser instance.
+        """
+        # Initialize Playwright and browser
+        browser = await self._launch_browser()
+        web_browser = WebBrowser(
+            _browser=browser, _pages=[], _headless=self._kwargs["headless"]
         )
 
         return web_browser
