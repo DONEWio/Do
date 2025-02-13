@@ -2,20 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v0.1.9] - 2025-02-13
-
-### Commits
-- Refactor state methods and improve web browser interaction logging
-
-### Added
-
-
-### Fixed
-
-
-### Changed
-
-
 
 
 ## [v0.1.8] - 2025-02-13

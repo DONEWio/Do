@@ -14,7 +14,8 @@ This process uses GitHub Actions for automated building and publishing to PyPI.
    - Edit `src/donew/__init__.py`: Update `__version__ = "x.y.z"`
 
 2. Update CHANGELOG.md:
-Grab commits and messages between 2 releases and compile
+Grab commits and messages between 2 releases and compile using
+update_changelog.sh --release=x.y.z
    ```markdown
    ## [x.y.z] - YYYY-MM-DD
    ### Added
