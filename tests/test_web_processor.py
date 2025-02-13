@@ -166,7 +166,8 @@ def test_status_codes(httpbin_url, httpbin_available):
             "window.performance.getEntries()[0].responseStatus"
         )
         assert status_code == 404
-        browser._current_page()._interaction_history[-1].interaction_type = "navigation_error"
+        interaction_history = browser._current_page()._interaction_history
+        assert interaction_history[-1].interaction_type == "navigation_error"
         #lets try again to check recovery
         browser.goto(f"{httpbin_url}/status/200")
         assert browser._current_page().is_live()
@@ -179,6 +180,64 @@ def test_status_codes(httpbin_url, httpbin_available):
         
     finally:
         browser.close()
+
+
+def test_state_html(httpbin_url, httpbin_available):
+    """Test state() output using httpbin's HTML page"""
+    browser = DO.Browse()
+    browser.goto(f"{httpbin_url}/status/200")
+
+    try:
+        # Test successful response
+        assert browser._current_page().is_live()
+
+        # Navigate to a 404 page
+        try:
+            browser.goto(f"{httpbin_url}/status/404")
+        except NavigationError as e:
+            assert e.url == f"{httpbin_url}/status/404"
+            # The page should still be live even with 404
+        assert browser._current_page().is_live()
+
+        status_code = browser.evaluate(
+            "window.performance.getEntries()[0].responseStatus"
+        )
+        assert status_code == 404
+        interaction_history = browser._current_page()._interaction_history
+        assert interaction_history[-1].interaction_type == "navigation_error"
+        # Navigate to HTML page
+        browser.goto(f"{httpbin_url}/html")
+        assert browser._current_page().is_live()
+
+        # Get the state output
+        state = browser.state()
+        print(state)
+        
+        # Verify state contains expected sections
+        assert "## Timeline" in state
+        assert "Goto to http://localhost:8070/status/200" in state
+        assert "Navigation error: http://localhost:8070/status/404" in state
+        assert "Goto to http://localhost:8070/html" in state
+        assert "## Current State" in state
+        assert "### Page" in state
+        assert "| Property      | Value                      |" in state
+        assert "|:--------------|:---------------------------|" in state
+        assert "| URL           | http://localhost:8070/html |" in state
+        assert "| Title         |                            |" in state
+        assert "| Element Count | 4                          |" in state
+        assert "### Elements" in state
+        assert "| Property      | Value                        |" in state
+        assert "|:--------------|:-----------------------------|" in state
+        assert "| Interactive   | 0 buttons, 0 inputs, 0 links |" in state
+        assert "| Text Elements | 4                            |" in state
+        assert "| Images        | 0                            |" in state
+        
+   
+
+    finally:
+        browser.close()
+
+
 
 
 def test_image_processing(httpbin_url, httpbin_available):
@@ -237,16 +296,15 @@ def test_image_processing(httpbin_url, httpbin_available):
 
 def test_element_annotation(httpbin_url, httpbin_available):
     """Test web element annotation functionality"""
-    browser = DO.Browse()
+    browser = DO.Browse(headless=False)
     browser.goto(f"{httpbin_url}/forms/post")
 
     try:
-        time.sleep(1)  # Wait for page load
+       
 
         # Enable annotations
         browser.annotation(True)
-        time.sleep(1)
-
+      
         # Verify annotations are added
         script = "document.querySelectorAll('.DoSee-highlight').length"
         highlight_count = browser.evaluate(script)
@@ -254,7 +312,7 @@ def test_element_annotation(httpbin_url, httpbin_available):
 
         # Disable annotations
         browser.annotation(False)
-        time.sleep(1)
+       
 
         # Verify annotations are removed
         highlight_count = browser.evaluate(script)

@@ -270,20 +270,20 @@ Please use the async methods (a_*) instead.""",
 
     async def a_state(self) -> str:
         """Async version of state."""
-        return self._format_state(await self.a_get_state_dict())
+        return self._format_state(await self._get_state_dict())
 
     def state(self) -> str:
         """Synchronous state operation."""
         return self._sync(self.a_state())
 
     @abstractmethod
-    async def a_get_state_dict(self) -> StateDict:
+    async def _get_state_dict(self) -> StateDict:
         """Async version of get_state_dict."""
         pass
 
     def get_state_dict(self) -> StateDict:
         """Synchronous get_state_dict operation."""
-        return self._sync(self.a_get_state_dict())
+        return self._sync(self._get_state_dict())
 
 
 class BaseProcessor(ABC, Generic[T]):

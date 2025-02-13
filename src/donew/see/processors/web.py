@@ -799,6 +799,8 @@ class WebBrowser(BaseTarget):
                     label = metadata.get("element_label", "")
                     element_desc = f'"{label}" ({xpath})' if label else xpath
                     action = f"Clicked {element_desc}"
+                elif action_type == "navigation_error":
+                    action = f"Navigation error: {metadata['data']['url']}"
                 else:
                     xpath = metadata.get("xpath", "unknown")
                     label = metadata.get("element_label", "")
