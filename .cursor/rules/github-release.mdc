@@ -14,6 +14,7 @@ This process uses GitHub Actions for automated building and publishing to PyPI.
    - Edit `src/donew/__init__.py`: Update `__version__ = "x.y.z"`
 
 2. Update CHANGELOG.md:
+Grab commits and messages between 2 releases and compile
    ```markdown
    ## [x.y.z] - YYYY-MM-DD
    ### Added
@@ -37,8 +38,8 @@ This process uses GitHub Actions for automated building and publishing to PyPI.
    ```bash
    # This will create a release and trigger the PyPI publish workflow
    gh release create vx.y.z \
-     --title "DoNew vx.y.z" \
-     --notes-file CHANGELOG.md
+   --title "DoNew vx.y.z" \
+   --generate-notes
    ```
 
 ## Post-release
