@@ -5,7 +5,7 @@ DoNew
 Description of your package.
 """
 
-__version__ = "0.1.8"  # Remember to update this when bumping version in pyproject.toml
+__version__ = "0.1.9"  # Remember to update this when bumping version in pyproject.toml
 
 from typing import Literal, Optional, Sequence, Union, cast, Any
 from donew.new import Model

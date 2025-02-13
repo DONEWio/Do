@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.9] - 2025-02-13
+
+### Commits
+- Update CHANGELOG.md template for release process
+- Refactor changelog generation and update release documentation
+- Refactor state methods and improve web browser interaction logging
+
+### Added
+
+
+### Fixed
+
+
+### Changed
+
+
 
 
 ## [v0.1.8] - 2025-02-13
